@@ -13,19 +13,21 @@
   ******************************************************************************
   */
 
+#include "main.h"
+#include <stdbool.h>
+#include <errno.h>
+#include <unistd.h>
 
-#include "sys_command_line.h"
-#include "./../bsp/bsp_usart.h"
-#include "./../app/app_led.h"
+#include "../shell/inc/sys_command_line.h"
 
+static uint8_t 	cli_help(void *para, uint8_t len);
+static uint8_t 	cli_clear(void *para, uint8_t len);
+static uint8_t 	cli_echo(void *para, uint8_t len);
+static uint8_t 	cli_reboot(void *para, uint8_t len);
 
-static uint8_t cli_help(void *para, uint8_t len);
-static uint8_t cli_clear(void *para, uint8_t len);
-static uint8_t cli_echo(void *para, uint8_t len);
-static uint8_t cli_reboot(void *para, uint8_t len);
+unsigned char cBuffer;
 
-
-__packed typedef struct {
+typedef struct {
 #define HANDLE_LEN 128
 
     uint8_t buff[HANDLE_LEN];
@@ -37,6 +39,8 @@ __packed typedef struct {
 uint8_t cli_echo_flag = DISABLE; /* ECHO default: disable */
 
 RX_BUFF_TYPE cli_rx_buff; /* 128byte FIFO, saving commands from the terminal */
+
+UART_HandleTypeDef *huart_shell;
 
 
 
@@ -64,21 +68,6 @@ const char CLI_Cmd_Reboot[] =
 
 
 /**
-  * cmd struct
-  */
-const COMMAND_S CLI_Cmd[] = {
-    /* cmd              cmd help            init func.      func. */
-    {"help",            CLI_Cmd_Help,       NULL,           cli_help},
-    {"cls",             CLI_Cmd_Clear,      NULL,           cli_clear},
-    {"echo",            CLI_Cmd_Echo,       NULL,           cli_echo},
-    {"reboot",          CLI_Cmd_Reboot,     NULL,           cli_reboot},
-
-    /* application cmd start */
-    {"led",           CLI_Cmd_LED,          CLI_LED_Init,   CLI_LED},
-};
-
-
-/**
   * @brief  printf the help info.
   * @param  para addr. & length
   * @retval True means OK
@@ -90,11 +79,11 @@ static uint8_t cli_help(void *para, uint8_t len)
 
     for(i = 0; i < sizeof(CLI_Cmd) / sizeof(COMMAND_S); i++) {
         if (NULL != CLI_Cmd[i].pHelp) {
-            PRINTF(CLI_Cmd[i].pHelp);
+            printf(CLI_Cmd[i].pHelp);
         }
     }
 
-    return TRUE;
+    return true;
 }
 
 
@@ -105,8 +94,8 @@ static uint8_t cli_help(void *para, uint8_t len)
   */
 static uint8_t cli_clear(void *para, uint8_t len)
 {
-    TERMINAL_BACK_BLACK(); /* set terminal background color: black */
-    TERMINAL_FONT_GREEN(); /* set terminal display color: green */
+    TERMINAL_BACK_DEFAULT(); /* set terminal background color: black */
+    TERMINAL_FONT_DEFAULT(); /* set terminal display color: green */
 
     /* This prints the clear screen and move cursor to top-left corner control
      * characters for VT100 terminals. This means it will not work on
@@ -115,7 +104,7 @@ static uint8_t cli_clear(void *para, uint8_t len)
     TERMINAL_RESET_CURSOR();
     TERMINAL_DISPLAY_CLEAR();
 
-    return TRUE;
+    return true;
 }
 
 
@@ -135,18 +124,18 @@ static uint8_t cli_echo(void *para, uint8_t len)
         if('1' == *pTemp) {
             /* ECHO on */
             cli_echo_flag = ENABLE;
-            PRINTF("echo on\r\n");
+            printf("echo on\r\n");
         } else if('0' == *pTemp) {
             /* ECHO off */
             cli_echo_flag = DISABLE;
-            PRINTF("echo off\r\n");
+            printf("echo off\r\n");
         } else {
             /* wrong para, return False */
-            return FALSE;
+            return false;
         }
     }
 
-    return TRUE;
+    return true;
 }
 
 
@@ -157,23 +146,21 @@ static uint8_t cli_echo(void *para, uint8_t len)
   */
 static uint8_t cli_reboot(void *para, uint8_t len)
 {
-    extern void Delay(__IO uint32_t nCount);
-    PRINTF("\r\n[END]: System Rebooting");
-    PRINTF(".");
-    Delay(0x8FFFFF);
-    PRINTF(".");
-    Delay(0x8FFFFF);
-    PRINTF(".");
+    printf("\r\n[END]: System Rebooting");
+    printf(".");
+    HAL_Delay(200);
+    printf(".");
+    HAL_Delay(200);
+    printf(".");
+    HAL_NVIC_SystemReset();
 
-    SYSTEM_REBOOT();
-
-    return TRUE;
+    return true;
 }
 
 
 #if CLI_HISTORY
 
-__packed typedef struct {
+typedef struct {
     char cmd[HISTORY_MAX][HANDLE_LEN];
     uint8_t count;
     uint8_t latest;
@@ -231,13 +218,13 @@ static void cli_history_add(char* buff)
   */
 static uint8_t cli_history_show(uint8_t mode, char** p_history)
 {
-    uint8_t err = TRUE;
+    uint8_t err = true;
     uint8_t num;
     uint8_t index;
 
     if (0 == history.count) return err;
 
-    if (TRUE == mode) {
+    if (true == mode) {
         /* look up */
         if (history.show < history.count) {
             history.show++;
@@ -260,9 +247,9 @@ static uint8_t cli_history_show(uint8_t mode, char** p_history)
         num--;
     }
 
-    err = FALSE;
+    err = false;
     *p_history = history.cmd[index];
-    //PRINTF("history: %s \r\n", history.cmd[index]);
+    //printf("history: %s \r\n", history.cmd[index]);
 
     return err;
 }
@@ -275,8 +262,10 @@ static uint8_t cli_history_show(uint8_t mode, char** p_history)
   * @param  bandrate
   * @retval null
   */
-void cli_init(uint32_t baud)
+void cli_init(UART_HandleTypeDef *handle_uart)
 {
+	huart_shell = handle_uart;
+
     uint8_t i;
 
     memset((uint8_t *)&cli_rx_buff, 0, sizeof(RX_BUFF_TYPE));
@@ -285,34 +274,68 @@ void cli_init(uint32_t baud)
     memset((uint8_t *)&history, 0, sizeof(history));
 #endif  /* CLI_HISTORY */
 
-    USART_INIT(baud);
+    HAL_UART_MspInit(huart_shell);
+    //HAL_UART_RegisterRxEventCallback(huart_shell, cli_RXEventCallback);
+    HAL_UART_Receive_IT(huart_shell, &cBuffer, 1);
 
     /* init. every command */
     for(i = 0; i < sizeof(CLI_Cmd) / sizeof(COMMAND_S); i++) {
         /* need to init. or not */
         if(NULL != CLI_Cmd[i].pInit) {
-            if(FALSE == CLI_Cmd[i].pInit()) {
+            if(!CLI_Cmd[i].pInit()) {
                 /* something wrong */
-                PRINTF("\r\n-> FUN[%d] INIT WRONG\r\n", i);
+                printf("\r\n-> FUN[%d] INIT WRONG\r\n", i);
             }
         }
     }
 
-    PRINTF(" \r\n");
-    TERMINAL_BACK_BLACK(); /* set terminal background color: black */
-    TERMINAL_FONT_GREEN(); /* set terminal display color: green */
+    printf(" \r\n");
+    TERMINAL_BACK_DEFAULT(); /* set terminal background color: black */
     TERMINAL_DISPLAY_CLEAR();
     TERMINAL_RESET_CURSOR();
-
-    PRINTF_COLOR(E_FONT_YELLOW, "-------------------------------\r\n\r\n");
-    TERMINAL_HIGH_LIGHT();
-    PRINTF("    CLI version: V0.6          \r\n\r\n");
-    PRINTF("    coder: Cat                 \r\n\r\n");
-    PRINTF("    Email: 843553493@qq.com    \r\n\r\n");
-    TERMINAL_UN_HIGH_LIGHT();
-    PRINTF_COLOR(E_FONT_YELLOW, "-------------------------------\r\n\r\n");
+    TERMINAL_FONT_BLUE();
+    printf("                             ///////////////////////////////////////////    ");NL1();
+    printf("                             /////*   .////////////////////////     *///    ");NL1();
+    printf("            %%%%%%         %%%%%%  ///   ////  //   //////////  //   ////   //    ");NL1();
+    printf("            %%%%%%        %%%%%%   ///  //////////   ////////  ///  //////////    ");NL1();
+    printf("           %%%%%%        %%%%%%%%   ((((   (((((((((   ((((((  (((((   .(((((((    ");NL1();
+    printf("          %%%%%%        %%%%%%%%    (((((((    (((((((  ((((  (((((((((    ((((    ");NL1();
+    printf("          %%%%%%      %%%%  %%%%    ((((((((((   ((((((  ((  ((((((((((((((  ((    ");NL1();
+    printf("         %%%%%%%%    %%%%%%   %%%%%%%%  (((*((((((  .(((((((    ((((((( ((((((   ((    ");NL1();
+    printf("         %%%%*%%%%%%%%%%%%           (((        (((((((((   ((((((((        ((((    ");NL1();
+    printf("        %%%%   %%%%.             ###################   ##################### (((");NL1();
+    printf("       %%%%%%          (((      ##################   ##################((((((( ");NL1();
+    printf("       %%%%               (((( #################   ##############(((((((##    ");NL1();
+    printf("      %%%%%%                   (((((((((##################((((((((((#######    ");NL1();
+    printf("     %%%%%%                     ########(((((((((((((((((((################    ");NL1();
+    printf("     %%%%%%                     ##%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%    ");NL1();
+    printf("    %%%%%%                      %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    ");NL1();
+    printf("    %%%%%%                      %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    ");NL1();
+    printf("                             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    ");NL1();
+    printf("                             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    ");NL1();
+    printf("µShell v0.1 - by Morgan Diepart (mdiepart@uliege.be)");NL1();
+    printf("Original work from https://github.com/ShareCat/STM32CommandLine");NL1();
+    printf("-------------------------------");NL3();
+    TERMINAL_FONT_DEFAULT();
 }
 
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef * huart){
+	//HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
+	QUEUE_PUT(cli_rx_buff, cBuffer);
+	HAL_UART_Receive_IT(huart, &cBuffer, 1);
+
+}
+
+//static void cli_RXEventCallback(UART_HandleTypeDef * huart, uint16_t Size){
+//	HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
+    /*uint8_t ucData;
+    if(USART_GetITStatus(DEBUG_USARTx, USART_IT_RXNE) != RESET) {
+        ucData = USART_ReceiveData(DEBUG_USARTx);
+        // save char
+        QUEUE_IN(cli_rx_buff, ucData);
+        //printf("%02x", ucTemp);
+    }*/
+//}
 
 /**
   * @brief  handle commands from the terminal
@@ -325,7 +348,7 @@ static void cli_rx_handle(RX_BUFF_TYPE *rx_buff)
     uint8_t i = Handle.len;
     uint8_t ParaLen;
     uint8_t *ParaAddr;
-    uint8_t cmd_match = FALSE;
+    uint8_t cmd_match = false;
 
     /*  ---------------------------------------
         Step1: save chars from the terminal
@@ -336,7 +359,7 @@ static void cli_rx_handle(RX_BUFF_TYPE *rx_buff)
         if(Handle.len < HANDLE_LEN) {  /* check the buffer */
 
             /* new char coming from the terminal, copy it to Handle.buff */
-            if(TRUE == QUEUE_OUT((*rx_buff), Handle.buff[Handle.len])) {
+            if(QUEUE_GET((*rx_buff), Handle.buff[Handle.len])) {
                 /* KEY_BACKSPACE -->get DELETE key from keyboard */
                 if (KEY_BACKSPACE == Handle.buff[Handle.len]) {
                     /* buffer not empty */
@@ -348,7 +371,7 @@ static void cli_rx_handle(RX_BUFF_TYPE *rx_buff)
                     }
 
                 } else {
-                    //PRINTF("%02x ", Handle.buff[Handle.len]); /* debug */
+                    //printf("%02x ", Handle.buff[Handle.len]); /* debug */
                     Handle.len++;
                 }
 
@@ -361,33 +384,33 @@ static void cli_rx_handle(RX_BUFF_TYPE *rx_buff)
 
                 if (Handle.len > 2) {
                     if (0 != strstr((const char *)Handle.buff, KEY_UP)) {
-                        //PRINTF("KEY_UP \r\n");
+                        //printf("KEY_UP \r\n");
                         key = 1;
                         TERMINAL_MOVE_LEFT(Handle.len);
                         TERMINAL_CLEAR_END();
-                        err = cli_history_show(TRUE, &p_hist_cmd);
+                        err = cli_history_show(true, &p_hist_cmd);
                     } else if (0 != strstr((const char *)Handle.buff, KEY_DOWN)) {
-                        //PRINTF("KEY_DOWN \r\n");
+                        //printf("KEY_DOWN \r\n");
                         key = 2;
                         TERMINAL_MOVE_LEFT(Handle.len);
                         TERMINAL_CLEAR_END();
-                        err = cli_history_show(FALSE, &p_hist_cmd);
+                        err = cli_history_show(false, &p_hist_cmd);
                     } else if (0 != strstr((const char *)Handle.buff, KEY_RIGHT)) {
-                        //PRINTF("KEY_RIGHT \r\n");
+                        //printf("KEY_RIGHT \r\n");
                         key = 3;
                     } else if (0 != strstr((const char *)Handle.buff, KEY_LEFT)) {
-                        //PRINTF("KEY_LEFT \r\n");
+                        //printf("KEY_LEFT \r\n");
                         key = 4;
                     }
 
                     if (0 != key) {
-                        if (FALSE == err) {
+                        if (false == err) {
                             memset(&Handle, 0x00, sizeof(Handle));
                             memcpy(Handle.buff, p_hist_cmd, strlen(p_hist_cmd));
                             Handle.len = strlen(p_hist_cmd);
                             Handle.buff[Handle.len] = '\0';
-                            PRINTF("%s", Handle.buff);  /* display history command */
-                        } else if ((TRUE == err) || (0 != key)) {
+                            printf("%s", Handle.buff);  /* display history command */
+                        } else if ((true == err) || (0 != key)) {
                             /* no history found */
                             TERMINAL_MOVE_LEFT(Handle.len);
                             TERMINAL_CLEAR_END();
@@ -400,7 +423,8 @@ static void cli_rx_handle(RX_BUFF_TYPE *rx_buff)
 #endif  /* CLI_HISTORY */
                     /* display char in terminal */
                     for (; i < Handle.len; i++) {
-                        USART_SendData(DEBUG_USARTx, Handle.buff[i]);
+                    	HAL_UART_Transmit(huart_shell, Handle.buff+i, 1, 10);
+                        //USART_SendData(DEBUG_USARTx, Handle.buff[i]);
                     }
 #if CLI_HISTORY
                 }
@@ -431,14 +455,14 @@ static void cli_rx_handle(RX_BUFF_TYPE *rx_buff)
                 if(0 == strncmp((const char *)Handle.buff,
                                 (void *)CLI_Cmd[i].pCmd,
                                 strlen(CLI_Cmd[i].pCmd))) {
-                    cmd_match = TRUE;
+                    cmd_match = true;
                     ParaLen = Handle.len - strlen(CLI_Cmd[i].pCmd);   /* para. length */
                     ParaAddr = &Handle.buff[strlen(CLI_Cmd[i].pCmd)]; /* para. address */
 
                     if(NULL != CLI_Cmd[i].pFun) {
                         /* call the func. */
                         if(CLI_Cmd[i].pFun(ParaAddr, ParaLen)) {
-                            PRINTF("\r\n-> OK\r\n");
+                            printf("\r\n-> OK\r\n");
 
 #if CLI_HISTORY
                             cli_history_add((char *)Handle.buff);
@@ -447,23 +471,23 @@ static void cli_rx_handle(RX_BUFF_TYPE *rx_buff)
                             /* ECHO */
                             if(ENABLE == cli_echo_flag) {
                                 Handle.buff[Handle.len] = '\0';
-                                PRINTF("[echo]: %s\r\n", (const char*)Handle.buff);
+                                printf("[echo]: %s\r\n", (const char*)Handle.buff);
                             }
                         } else {
-                            PRINTF("\r\n-> PARA. ERR\r\n");
+                            printf("\r\n-> PARA. ERR\r\n");
                             /* parameter wrong */
-                            PRINTF(CLI_Cmd[i].pHelp);
+                            printf(CLI_Cmd[i].pHelp);
                         }
                     } else {
                         /* func. is void */
-                        PRINTF("\r\n-> FUNC. ERR\r\n");
+                        printf("\r\n-> FUNC. ERR\r\n");
                     }
                 }
             }
 
-            if(FALSE == cmd_match) {
+            if(false == cmd_match) {
                 /* no matching command */
-                PRINTF("\r\n-> CMD ERR, try: help\r\n\r\n");
+                printf("\r\nCommand \"%s\" unknown, try: help\r\n\r\n", Handle.buff);
             }
 
             Handle.len = 0;
@@ -502,4 +526,43 @@ void cli_run(void)
     cli_tx_handle();
 }
 
+#if CLI_PRINTF
 
+/* These functions need to be redefined over the [_weak] versions defined by GCC in order to make the stdio library functional.*/
+/*int _read(int file, char *data, int len){}*/
+
+int _write(int file, char *data, int len){
+	if(file != STDOUT_FILENO && file != STDERR_FILENO){
+		errno = EBADF;
+		return -1;
+	}
+	HAL_StatusTypeDef status = HAL_UART_Transmit(huart_shell, (uint8_t *)data, len, 100);
+
+	if(status == HAL_OK){
+		return len;
+	}else{
+		return 0;
+	}
+}
+
+
+/*int _close(int file){}*/
+
+/*int _lseek(int file, int ptr, int dir){}*/
+
+/*int _fstat(int file, struct stat *st){}*/
+
+int _isatty(int file){
+	switch(file){
+	case STDERR_FILENO:
+	case STDIN_FILENO:
+	case STDOUT_FILENO:
+		return 1;
+	default:
+		errno = EBADF;
+		return 0;
+	}
+
+}
+
+#endif

@@ -21,13 +21,12 @@
 
 
 /* Macro config --------------------------------------------------------------*/
-#define CLI_ENABLE          TRUE                    /* command line enable/disable */
-#define CLI_HISTORY         TRUE                    /* history command enable/disable */
+#define CLI_ENABLE          true                    /* command line enable/disable */
+#define CLI_HISTORY         true                    /* history command enable/disable */
 #define HISTORY_MAX         10                      /* maxium number ofhistory command */
-#define CLI_PRINTF          TRUE                    /* printf for debug */
+#define CLI_PRINTF          true                    /* printf for debug */
 #define CLI_BAUDRATE        ((uint32_t)115200)      /* band rate */
-#define USART_INIT(baud)    debug_usart_init(baud)  /* usart init. */
-#define SYSTEM_REBOOT()     NVIC_SystemReset()      /* MCU reboot */
+
 
 
 #define KEY_UP              "\x1b\x5b\x41"  /* [up] key: 0x1b 0x5b 0x41 */
@@ -48,9 +47,6 @@
 
 
 #if CLI_PRINTF
-    #define PRINTF(...)         printf(__VA_ARGS__)
-    #define SPRINTF(...)        sprintf(__VA_ARGS__)
-
 enum {
     E_FONT_BLACK,
     E_FONT_L_RED,
@@ -94,76 +90,44 @@ enum {
                                             break;                  \
                                         }                           \
                                         printf(__VA_ARGS__);        \
-                                        TERMINAL_FONT_GREEN();      \
+                                        TERMINAL_FONT_DEFAULT();    \
                                     } while(0)
 #else
-    #define PRINTF(...)         ;
-    #define SPRINTF(...)        ;
     #define PRINTF_COLOR(c, ...);
 #endif /* CLI_PRINTF */
 
 
-
-
-/* assert---------------------------------------------------------------BEGIN */
-
-/* #val：使用#把宏参数变为一个字符串,用##把两个宏参数贴合在一起 */
-#define ASSERT(val)                                                     \
-if (!(val))                                                             \
-{                                                                       \
-    PRINTF("(%s) has assert failed at %s.\n", #val, __FUNCTION__);      \
-    while (1);                                                          \
-}
-
-/* assert-----------------------------------------------------------------END */
-
-
-
-
 /* debug----------------------------------------------------------------BEGIN */
 
-#define ERR(fmt)        do {                                            \
+
+#define ERR(fmt, ...)  do {                                             \
                             TERMINAL_FONT_RED();                        \
-                            PRINTF("### ERROR ###: "fmt"\r\n");         \
-                            TERMINAL_FONT_GREEN();                      \
-                        } while(0)
-#define ERRA(fmt, ...)  do {                                            \
-                            TERMINAL_FONT_RED();                        \
-                            PRINTF("### ERROR ### %s(%d): "fmt"\r\n",   \
+                            printf("### ERROR ### %s(%d): "fmt"\r\n",   \
                                 __FUNCTION__, __LINE__, __VA_ARGS__);   \
-                            TERMINAL_FONT_GREEN();                      \
+                            TERMINAL_FONT_DEFAULT();                    \
                         }while(0)
-#define LOG(fmt)        do {                                            \
+
+#define LOG(fmt, ...)  do {                                             \
                             TERMINAL_FONT_CYAN();                       \
-                            PRINTF("[Log]: "fmt"\r\n");                 \
-                            TERMINAL_FONT_GREEN();                      \
+                            printf("[Log]: "fmt"\r\n", __VA_ARGS__);    \
+                            TERMINAL_FONT_DEFAULT();                    \
                         } while(0)
-#define LOGA(fmt, ...)  do {                                            \
-                            TERMINAL_FONT_CYAN();                       \
-                            PRINTF("[Log]: "fmt"\r\n", __VA_ARGS__);    \
-                            TERMINAL_FONT_GREEN();                      \
-                        } while(0)
-#define DBG(fmt)        do {                                            \
+
+#define DBG(fmt, ...)  do {                                             \
                             TERMINAL_FONT_YELLOW();                     \
-                            PRINTF("[Debug] %s(%d): "fmt"\r\n",         \
-                                __FUNCTION__, __LINE__);                \
-                            TERMINAL_FONT_GREEN();                      \
-                        } while(0)
-#define DBGA(fmt, ...)  do {                                            \
-                            TERMINAL_FONT_YELLOW();                     \
-                            PRINTF("[Debug] %s(%d): "fmt"\r\n",         \
+                            printf("[Debug] %s(%d): "fmt"\r\n",         \
                                 __FUNCTION__, __LINE__, __VA_ARGS__);   \
-                            TERMINAL_FONT_GREEN();                      \
+                                TERMINAL_FONT_DEFAULT();                \
                         } while(0)
 #define DIE(fmt)        do {                                            \
                             TERMINAL_FONT_RED();                        \
-                            TERMINAL_HIGH_LIGHT();                      \
-                            PRINTF("### DIE ### %s(%d): "fmt"\r\n",     \
+                            TERMINAL_HIGHLIGHT();                       \
+                            printf("### DIE ### %s(%d): "fmt"\r\n",     \
                                 __FUNCTION__, __LINE__);                \
                         } while(1) /* infinite loop */
-#define NL1()           do { PRINTF("\r\n"); } while(0)
-#define NL2()           do { PRINTF("\r\n\r\n"); } while(0)
-#define NL3()           do { PRINTF("\r\n\r\n\r\n"); } while(0)
+#define NL1()           do { printf("\r\n"); } while(0)
+#define NL2()           do { printf("\r\n\r\n"); } while(0)
+#define NL3()           do { printf("\r\n\r\n\r\n"); } while(0)
 
 /* debug------------------------------------------------------------------END */
 
@@ -211,60 +175,62 @@ if (!(val))                                                             \
 */
 
 /* font color */
-#define TERMINAL_FONT_BLACK()       PRINTF("\033[1;30m")
-#define TERMINAL_FONT_L_RED()       PRINTF("\033[0;31m")    /* light red */
-#define TERMINAL_FONT_RED()         PRINTF("\033[1;31m")    /* red */
-#define TERMINAL_FONT_GREEN()       PRINTF("\033[1;32m")
-#define TERMINAL_FONT_YELLOW()      PRINTF("\033[1;33m")
-#define TERMINAL_FONT_BLUE()        PRINTF("\033[1;34m")
-#define TERMINAL_FONT_PURPLE()      PRINTF("\033[1;35m")
-#define TERMINAL_FONT_CYAN()        PRINTF("\033[1;36m")
-#define TERMINAL_FONT_WHITE()       PRINTF("\033[1;37m")
+#define TERMINAL_FONT_BLACK()       printf("\033[1;30m")
+#define TERMINAL_FONT_L_RED()       printf("\033[0;31m")    /* light red */
+#define TERMINAL_FONT_RED()         printf("\033[1;31m")    /* red */
+#define TERMINAL_FONT_GREEN()       printf("\033[1;32m")
+#define TERMINAL_FONT_YELLOW()      printf("\033[1;33m")
+#define TERMINAL_FONT_BLUE()        printf("\033[1;34m")
+#define TERMINAL_FONT_PURPLE()      printf("\033[1;35m")
+#define TERMINAL_FONT_CYAN()        printf("\033[1;36m")
+#define TERMINAL_FONT_WHITE()       printf("\033[1;37m")
+#define TERMINAL_FONT_DEFAULT()		TERMINAL_FONT_WHITE()
 
 /* background color */
-#define TERMINAL_BACK_BLACK()       PRINTF("\033[1;40m")
-#define TERMINAL_BACK_L_RED()       PRINTF("\033[0;41m")    /* light red */
-#define TERMINAL_BACK_RED()         PRINTF("\033[1;41m")    /* red */
-#define TERMINAL_BACK_GREEN()       PRINTF("\033[1;42m")
-#define TERMINAL_BACK_YELLOW()      PRINTF("\033[1;43m")
-#define TERMINAL_BACK_BLUE()        PRINTF("\033[1;44m")
-#define TERMINAL_BACK_PURPLE()      PRINTF("\033[1;45m")
-#define TERMINAL_BACK_CYAN()        PRINTF("\033[1;46m")
-#define TERMINAL_BACK_WHITE()       PRINTF("\033[1;47m")
+#define TERMINAL_BACK_BLACK()       printf("\033[1;40m")
+#define TERMINAL_BACK_L_RED()       printf("\033[0;41m")    /* light red */
+#define TERMINAL_BACK_RED()         printf("\033[1;41m")    /* red */
+#define TERMINAL_BACK_GREEN()       printf("\033[1;42m")
+#define TERMINAL_BACK_YELLOW()      printf("\033[1;43m")
+#define TERMINAL_BACK_BLUE()        printf("\033[1;44m")
+#define TERMINAL_BACK_PURPLE()      printf("\033[1;45m")
+#define TERMINAL_BACK_CYAN()        printf("\033[1;46m")
+#define TERMINAL_BACK_WHITE()       printf("\033[1;47m")
+#define TERMINAL_BACK_DEFAULT()		TERMINAL_BACK_BLACK()
 
 /* terminal clear end */
-#define TERMINAL_CLEAR_END()        PRINTF("\033[K")
+#define TERMINAL_CLEAR_END()        printf("\033[K")
 
 /* terminal clear all */
-#define TERMINAL_DISPLAY_CLEAR()    PRINTF("\033[2J")
+#define TERMINAL_DISPLAY_CLEAR()    printf("\033[2J")
 
 /* cursor move up */
-#define TERMINAL_MOVE_UP(x)         PRINTF("\033[%dA", (x))
+#define TERMINAL_MOVE_UP(x)         printf("\033[%dA", (x))
 
 /* cursor move down */
-#define TERMINAL_MOVE_DOWN(x)       PRINTF("\033[%dB", (x))
+#define TERMINAL_MOVE_DOWN(x)       printf("\033[%dB", (x))
 
 /* cursor move left */
-#define TERMINAL_MOVE_LEFT(y)       PRINTF("\033[%dD", (y))
+#define TERMINAL_MOVE_LEFT(y)       printf("\033[%dD", (y))
 
 /* cursor move right */
-#define TERMINAL_MOVE_RIGHT(y)      PRINTF("\033[%dC",(y))
+#define TERMINAL_MOVE_RIGHT(y)      printf("\033[%dC",(y))
 
 /* cursor move to */
-#define TERMINAL_MOVE_TO(x, y)      PRINTF("\033[%d;%dH", (x), (y))
+#define TERMINAL_MOVE_TO(x, y)      printf("\033[%d;%dH", (x), (y))
 
 /* cursor reset */
-#define TERMINAL_RESET_CURSOR()     PRINTF("\033[H")
+#define TERMINAL_RESET_CURSOR()     printf("\033[H")
 
 /* cursor invisible */
-#define TERMINAL_HIDE_CURSOR()      PRINTF("\033[?25l")
+#define TERMINAL_HIDE_CURSOR()      printf("\033[?25l")
 
 /* cursor visible */
-#define TERMINAL_SHOW_CURSOR()      PRINTF("\033[?25h")
+#define TERMINAL_SHOW_CURSOR()      printf("\033[?25h")
 
 /* reverse display */
-#define TERMINAL_HIGH_LIGHT()       PRINTF("\033[7m")
-#define TERMINAL_UN_HIGH_LIGHT()    PRINTF("\033[27m")
+#define TERMINAL_HIGHLIGHT()       printf("\033[7m")
+#define TERMINAL_UN_HIGHLIGHT()    printf("\033[27m")
 
 /* terminal display-------------------------------------------------------END */
 
@@ -272,18 +238,30 @@ if (!(val))                                                             \
 #define RX_BUFF_TYPE        QUEUE64_S
 extern RX_BUFF_TYPE         cli_rx_buff;
 
-
-__packed typedef struct {
+typedef struct {
     const char *pCmd;
     const char *pHelp;
     uint8_t (*pInit)(void);
     uint8_t (*pFun)(void *, uint8_t);
 } COMMAND_S;
 
+/**
+  * cmd struct
+  */
+const COMMAND_S CLI_Cmd[] = {
+    /* cmd              cmd help            init func.      func. */
+	/* Builtin commands. Do not edit. */
+    {"help",            CLI_Cmd_Help,       NULL,           cli_help},
+    {"cls",             CLI_Cmd_Clear,      NULL,           cli_clear},
+    {"echo",            CLI_Cmd_Echo,       NULL,           cli_echo},
+    {"reboot",          CLI_Cmd_Reboot,     NULL,           cli_reboot},
 
+    /* Add your commands here. */
+    //{"led",           CLI_Cmd_LED,          CLI_LED_Init,   CLI_LED},
+};
 
-extern void cli_init(uint32_t baud);
-extern void cli_task(void);
+void cli_init(UART_HandleTypeDef *handle_uart);
+void cli_run(void);
 
 
 #endif /* __SYS_COMMAND_LINE_H */
