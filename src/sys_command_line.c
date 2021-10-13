@@ -31,7 +31,6 @@ typedef struct {
 typedef struct {
     const char *pCmd;
     const char *pHelp;
-    uint8_t (*pInit)(void);
     uint8_t (*pFun)(void *args, uint8_t len);
 } COMMAND_S;
 
@@ -39,27 +38,18 @@ RX_BUFF_TYPE        cli_rx_buff;
 unsigned char 		cBuffer;
 RX_BUFF_TYPE 		cli_rx_buff; 				/* 64 bytes FIFO, saving commands from the terminal */
 UART_HandleTypeDef 	*huart_shell;
+COMMAND_S			CLI_commands[MAX_COMMAND_NB];
 
 
 
 uint8_t 	cli_help			(void *para, uint8_t len);
-uint8_t 	cli_clear			(void *para, uint8_t len);
-uint8_t 	cli_reboot			(void *para, uint8_t len);
-
-
 const char 	cli_help_help[] 		= "\r\n[help]\r\n\tshow commands\r\n";
+
+uint8_t 	cli_clear			(void *para, uint8_t len);
 const char 	cli_clear_help[] 		= "[cls]\r\n\tclear the screen\r\n";
-const char 	cli_echo_help[] 		= "[echo]\r\n\techo 1: echo on\r\n\techo 0: echo off\r\n";
+
+uint8_t 	cli_reboot			(void *para, uint8_t len);
 const char 	cli_reboot_help[] 		= "[reboot]\r\n\treboot MCU\r\n";
-const 		COMMAND_S CLI_Cmd[] 	= {
-    /* cmd              cmd help            init func.      func. */
-    {"help",            cli_help_help,      NULL,           cli_help},
-    {"cls",             cli_clear_help,     NULL,           cli_clear},
-    {"reboot",          cli_reboot_help,    NULL,           cli_reboot},
-
-    /* Add your commands here. */
-
-};
 
 /* These functions need to be redefined over the [_weak] versions defined by GCC in
  * order to make the stdio library functional.*/
@@ -196,24 +186,20 @@ void cli_init(UART_HandleTypeDef *handle_uart)
 {
 	huart_shell = handle_uart;
 
-    uint8_t i;
-
     memset((uint8_t *)&cli_rx_buff, 0, sizeof(RX_BUFF_TYPE));
     memset((uint8_t *)&history, 0, sizeof(history));
 
     HAL_UART_MspInit(huart_shell);
     HAL_UART_Receive_IT(huart_shell, &cBuffer, 1);
 
-    /* init. every command */
-    for(i = 0; i < sizeof(CLI_Cmd) / sizeof(COMMAND_S); i++) {
-        /* need to init. or not */
-        if(NULL != CLI_Cmd[i].pInit) {
-            if(!CLI_Cmd[i].pInit()) {
-                /* something wrong */
-                printf("\r\n-> FUN[%d] INIT WRONG\r\n", i);
-            }
-        }
+    for(size_t j = 0; j < MAX_COMMAND_NB; j++){
+    	CLI_commands[j].pCmd = "";
+    	CLI_commands[j].pFun = NULL;
     }
+
+    CLI_ADD_CMD("help", cli_help_help, cli_help);
+    CLI_ADD_CMD("cls", cli_clear_help, cli_clear);
+    CLI_ADD_CMD("reboot", cli_reboot_help, cli_reboot);
 
     NL1();
     TERMINAL_BACK_DEFAULT(); /* set terminal background color: black */
@@ -367,18 +353,18 @@ static void cli_rx_handle(RX_BUFF_TYPE *rx_buff)
             Handle.buff[Handle.len - 1] = '\0';
 
             /* looking for a match */
-            for(i = 0; i < sizeof(CLI_Cmd) / sizeof(COMMAND_S); i++) {
+            for(i = 0; i < MAX_COMMAND_NB; i++) {
                 if(0 == strncmp((const char *)Handle.buff,
-                                (void *)CLI_Cmd[i].pCmd,
-                                strlen(CLI_Cmd[i].pCmd))) {
+                                (void *)CLI_commands[i].pCmd,
+                                strlen(CLI_commands[i].pCmd))) {
                     cmd_match = true;
-                    ParaLen = Handle.len - strlen(CLI_Cmd[i].pCmd);   /* para. length */
-                    ParaAddr = &Handle.buff[strlen(CLI_Cmd[i].pCmd)]; /* para. address */
+                    ParaLen = Handle.len - strlen(CLI_commands[i].pCmd);   /* para. length */
+                    ParaAddr = &Handle.buff[strlen(CLI_commands[i].pCmd)]; /* para. address */
 
-                    if(CLI_Cmd[i].pFun != NULL) {
+                    if(CLI_commands[i].pFun != NULL) {
                         /* call the func. */
                     	//TERMINAL_HIDE_CURSOR();
-                        CLI_Cmd[i].pFun(ParaAddr, ParaLen);
+                    	CLI_commands[i].pFun(ParaAddr, ParaLen);
                         cli_history_add((char *)Handle.buff);
                         //TERMINAL_SHOW_CURSOR();
                         break;
@@ -436,9 +422,9 @@ uint8_t cli_help(void *para, uint8_t len)
 {
     uint8_t i;
 
-    for(i = 0; i < sizeof(CLI_Cmd) / sizeof(COMMAND_S); i++) {
-        if (NULL != CLI_Cmd[i].pHelp) {
-            printf(CLI_Cmd[i].pHelp);
+    for(i = 0; i < MAX_COMMAND_NB; i++) {
+        if (CLI_commands[i].pHelp) {
+            printf(CLI_commands[i].pHelp);
         }
     }
 
@@ -476,4 +462,19 @@ uint8_t cli_reboot(void *para, uint8_t len)
     HAL_NVIC_SystemReset();
 
     return true;
+}
+
+void cli_add_command(const char *command, const char *help, uint8_t (*exec)(void *args, uint8_t len)){
+	size_t i = 0;
+	for(; i < MAX_COMMAND_NB; i++){
+		if(strcmp(CLI_commands[i].pCmd, "") == 0){
+			CLI_commands[i].pCmd = command;
+			CLI_commands[i].pFun = exec;
+			CLI_commands[i].pHelp = help;
+			break;
+		}
+	}
+	if(i == MAX_COMMAND_NB){
+		PRINTF_COLOR(E_FONT_RED, "Cannot add command %s, max number of command reached. The maximum number of command is set to %d.\r\n", command, MAX_COMMAND_NB);
+	}
 }

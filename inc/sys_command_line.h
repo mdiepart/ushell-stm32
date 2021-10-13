@@ -25,10 +25,14 @@
 #define CLI_ENABLE          true                    /* command line enable/disable */
 #define HISTORY_MAX         10                      /* maxium number ofhistory command */
 #define CLI_NAME			"vitapatch_bioz"		/* Device name shown in the shell */
+#define MAX_COMMAND_NB		32
+#define MAX_ARGC			8
 
 #if CLI_ENABLE
     #define CLI_INIT(...)       cli_init(__VA_ARGS__)
     #define CLI_RUN(...)        cli_run(__VA_ARGS__)
+	#define CLI_ADD_CMD(...)	cli_add_command(__VA_ARGS__)
+
 #else
     #define CLI_INIT(...)       ;
     #define CLI_RUN(...)        ;
@@ -81,6 +85,9 @@ void 		cli_init(UART_HandleTypeDef *handle_uart);
   * @retval null
   */
 void 		cli_run(void);
+
+void 		cli_add_command(const char *command, const char *help, uint8_t (*exec)(void *args, uint8_t len));
+
 
 #endif /* __SYS_COMMAND_LINE_H */
 
