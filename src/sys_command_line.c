@@ -31,7 +31,7 @@ typedef struct {
 typedef struct {
     const char *pCmd;
     const char *pHelp;
-    uint8_t (*pFun)(void *args, uint8_t len);
+    uint8_t (*pFun)(int argc, char *argv[]);
 } COMMAND_S;
 
 RX_BUFF_TYPE        cli_rx_buff;
@@ -42,13 +42,13 @@ COMMAND_S			CLI_commands[MAX_COMMAND_NB];
 
 
 
-uint8_t 	cli_help			(void *para, uint8_t len);
+uint8_t 	cli_help			(int argc, char *argv[]);
 const char 	cli_help_help[] 		= "\r\n[help]\r\n\tshow commands\r\n";
 
-uint8_t 	cli_clear			(void *para, uint8_t len);
+uint8_t 	cli_clear			(int argc, char *argv[]);
 const char 	cli_clear_help[] 		= "[cls]\r\n\tclear the screen\r\n";
 
-uint8_t 	cli_reboot			(void *para, uint8_t len);
+uint8_t 	cli_reboot			(int argc, char *argv[]);
 const char 	cli_reboot_help[] 		= "[reboot]\r\n\treboot MCU\r\n";
 
 /* These functions need to be redefined over the [_weak] versions defined by GCC in
@@ -248,8 +248,6 @@ static void cli_rx_handle(RX_BUFF_TYPE *rx_buff)
 {
     static HANDLE_TYPE_S Handle = {.len = 0};
     uint8_t i = Handle.len;
-    uint8_t ParaLen;
-    uint8_t *ParaAddr;
     uint8_t cmd_match = false;
     uint8_t exec_req = false;
 
@@ -352,25 +350,40 @@ static void cli_rx_handle(RX_BUFF_TYPE *rx_buff)
         if(Handle.buff[Handle.len - 1] == KEY_ENTER) {
             Handle.buff[Handle.len - 1] = '\0';
 
+            char *command = strtok((char *)Handle.buff, " \t");
+
             /* looking for a match */
             for(i = 0; i < MAX_COMMAND_NB; i++) {
-                if(0 == strncmp((const char *)Handle.buff,
-                                (void *)CLI_commands[i].pCmd,
-                                strlen(CLI_commands[i].pCmd))) {
+                if(0 == strcmp(command, CLI_commands[i].pCmd)) {
                     cmd_match = true;
-                    ParaLen = Handle.len - strlen(CLI_commands[i].pCmd);   /* para. length */
-                    ParaAddr = &Handle.buff[strlen(CLI_commands[i].pCmd)]; /* para. address */
+
+                    //Split arguments string to argc/argv
+                    uint8_t argc = 1;
+                    char 	*argv[MAX_ARGC];
+                    argv[0] = command;
+
+                    char *token = strtok(NULL, " \t");
+                    while(token != NULL){
+                    	if(argc >= MAX_ARGC){
+                    		PRINTF_COLOR(E_FONT_RED, "Maximum number of arguments is %d. Ignoring the rest of the arguments.\r\n", MAX_ARGC-1);
+                    		break;
+                    	}
+                    	argv[argc] = token;
+                    	argc++;
+                    	token = strtok(NULL, " \t");
+                    }
 
                     if(CLI_commands[i].pFun != NULL) {
                         /* call the func. */
-                    	//TERMINAL_HIDE_CURSOR();
-                    	CLI_commands[i].pFun(ParaAddr, ParaLen);
+                    	TERMINAL_HIDE_CURSOR();
+                    	NL1();
+                    	CLI_commands[i].pFun(argc, argv);
                         cli_history_add((char *)Handle.buff);
-                        //TERMINAL_SHOW_CURSOR();
+                        TERMINAL_SHOW_CURSOR();
                         break;
                     } else {
                         /* func. is void */
-                        printf("\r\n-> FUNC. ERR\r\n");
+                        PRINTF_COLOR(E_FONT_RED, "Command %s exists but no function is associated to it.\r\n", command);
                     }
                 }
             }
@@ -388,6 +401,8 @@ static void cli_rx_handle(RX_BUFF_TYPE *rx_buff)
 
     if(Handle.len >= HANDLE_LEN) {
         /* full, so restart the count */
+    	PRINTF_COLOR(E_FONT_RED, "Max command length is %d.\r\n", HANDLE_LEN-1);
+    	PRINT_CLI_NAME();
         Handle.len = 0;
     }
 }
@@ -418,17 +433,29 @@ void cli_run(void)
   * @param  para addr. & length
   * @retval True means OK
   */
-uint8_t cli_help(void *para, uint8_t len)
+uint8_t cli_help(int argc, char *argv[])
 {
-    uint8_t i;
-
-    for(i = 0; i < MAX_COMMAND_NB; i++) {
-        if (CLI_commands[i].pHelp) {
-            printf(CLI_commands[i].pHelp);
-        }
-    }
-
-    return true;
+	if(argc == 1){
+	    for(size_t i = 0; i < MAX_COMMAND_NB; i++) {
+	        if (CLI_commands[i].pHelp) {
+	            printf(CLI_commands[i].pHelp);
+	        }
+	    }
+	    return true;
+	}else if(argc == 2){
+	    for(size_t i = 0; i < MAX_COMMAND_NB; i++) {
+	    	if(strcmp(CLI_commands[i].pCmd, argv[1]) == 0){
+	    		printf(CLI_commands[i].pHelp);
+	    		return true;
+	    	}
+	    }
+	    printf("No help found for command %s.", argv[1]);
+	    return false;
+	}else{
+		printf("Command \"%s\" takes at most 1 argument.", argv[0]);NL1();
+		return false;
+	}
+    return false;
 }
 
 /**
@@ -436,8 +463,12 @@ uint8_t cli_help(void *para, uint8_t len)
   * @param  para addr. & length
   * @retval True means OK
   */
-uint8_t cli_clear(void *para, uint8_t len)
+uint8_t cli_clear(int argc, char *argv[])
 {
+	if(argc != 1){
+		printf("command \"%s\" does not take any argument.", argv[0]);NL1();
+		return false;
+	}
     TERMINAL_BACK_DEFAULT(); /* set terminal background color: black */
     TERMINAL_FONT_DEFAULT(); /* set terminal display color: green */
 
@@ -456,15 +487,19 @@ uint8_t cli_clear(void *para, uint8_t len)
   * @param  para addr. & length
   * @retval True means OK
   */
-uint8_t cli_reboot(void *para, uint8_t len)
+uint8_t cli_reboot(int argc, char *argv[])
 {
-    printf("\r\n[END]: System Rebooting");
-    HAL_NVIC_SystemReset();
+	if(argc > 1){
+		printf("Command \"%s\" takes no argument.", argv[0]);NL1();
+		return false;
+	}
 
-    return true;
+	printf("\r\n[END]: System Rebooting");
+	HAL_NVIC_SystemReset();
+	return true;
 }
 
-void cli_add_command(const char *command, const char *help, uint8_t (*exec)(void *args, uint8_t len)){
+void cli_add_command(const char *command, const char *help, uint8_t (*exec)(int argc, char *argv[])){
 	size_t i = 0;
 	for(; i < MAX_COMMAND_NB; i++){
 		if(strcmp(CLI_commands[i].pCmd, "") == 0){

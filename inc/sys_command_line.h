@@ -75,7 +75,7 @@
 
 /**
   * @brief  command line init.
-  * @param  bandrate
+  * @param  handle to uart peripheral
   * @retval null
   */
 void 		cli_init(UART_HandleTypeDef *handle_uart);
@@ -87,7 +87,7 @@ void 		cli_init(UART_HandleTypeDef *handle_uart);
   */
 void 		cli_run(void);
 
-void 		cli_add_command(const char *command, const char *help, uint8_t (*exec)(void *args, uint8_t len));
+void 		cli_add_command(const char *command, const char *help, uint8_t (*exec)(int argc, char *argv[]));
 
 
 #endif /* __SYS_COMMAND_LINE_H */
