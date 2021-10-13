@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include "../inc/sys_command_line.h"
 
 #define RX_BUFF_TYPE        QUEUE64_S
@@ -348,6 +349,7 @@ static void cli_rx_handle(RX_BUFF_TYPE *rx_buff)
     } else if(Handle.len > 1) {  /* check for the length of command */
         /* a command must ending with KEY_ENTER */
         if(Handle.buff[Handle.len - 1] == KEY_ENTER) {
+        	NL1();
             Handle.buff[Handle.len - 1] = '\0';
 
             char *command = strtok((char *)Handle.buff, " \t");
@@ -376,9 +378,13 @@ static void cli_rx_handle(RX_BUFF_TYPE *rx_buff)
                     if(CLI_commands[i].pFun != NULL) {
                         /* call the func. */
                     	TERMINAL_HIDE_CURSOR();
-                    	NL1();
-                    	CLI_commands[i].pFun(argc, argv);
+                    	uint8_t result = CLI_commands[i].pFun(argc, argv);
                         cli_history_add((char *)Handle.buff);
+                        if(result == EXIT_SUCCESS){
+                        	PRINTF_COLOR(E_FONT_GREEN, "(%s returned %d)\r\n", command, result);
+                        }else{
+                        	PRINTF_COLOR(E_FONT_RED, "(%s returned %d)\r\n", command, result);
+                        }
                         TERMINAL_SHOW_CURSOR();
                         break;
                     } else {
@@ -441,21 +447,21 @@ uint8_t cli_help(int argc, char *argv[])
 	            printf(CLI_commands[i].pHelp);
 	        }
 	    }
-	    return true;
+	    return EXIT_SUCCESS;
 	}else if(argc == 2){
 	    for(size_t i = 0; i < MAX_COMMAND_NB; i++) {
 	    	if(strcmp(CLI_commands[i].pCmd, argv[1]) == 0){
 	    		printf(CLI_commands[i].pHelp);
-	    		return true;
+	    		return EXIT_SUCCESS;
 	    	}
 	    }
-	    printf("No help found for command %s.", argv[1]);
-	    return false;
+	    printf("No help found for command %s.", argv[1]);NL1();
+	    return EXIT_FAILURE;
 	}else{
 		printf("Command \"%s\" takes at most 1 argument.", argv[0]);NL1();
-		return false;
+		return EXIT_FAILURE;
 	}
-    return false;
+    return EXIT_FAILURE;
 }
 
 /**
@@ -467,7 +473,7 @@ uint8_t cli_clear(int argc, char *argv[])
 {
 	if(argc != 1){
 		printf("command \"%s\" does not take any argument.", argv[0]);NL1();
-		return false;
+		return EXIT_FAILURE;
 	}
     TERMINAL_BACK_DEFAULT(); /* set terminal background color: black */
     TERMINAL_FONT_DEFAULT(); /* set terminal display color: green */
@@ -479,7 +485,7 @@ uint8_t cli_clear(int argc, char *argv[])
     TERMINAL_RESET_CURSOR();
     TERMINAL_DISPLAY_CLEAR();
 
-    return true;
+    return EXIT_SUCCESS;
 }
 
 /**
@@ -491,12 +497,12 @@ uint8_t cli_reboot(int argc, char *argv[])
 {
 	if(argc > 1){
 		printf("Command \"%s\" takes no argument.", argv[0]);NL1();
-		return false;
+		return EXIT_FAILURE;
 	}
 
 	printf("\r\n[END]: System Rebooting");
 	HAL_NVIC_SystemReset();
-	return true;
+	return EXIT_SUCCESS;
 }
 
 void cli_add_command(const char *command, const char *help, uint8_t (*exec)(int argc, char *argv[])){
