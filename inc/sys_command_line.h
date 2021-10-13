@@ -36,6 +36,7 @@
 #else
     #define CLI_INIT(...)       ;
     #define CLI_RUN(...)        ;
+	#define CLI_ADD_CMD(...)	;
 #endif /* CLI_ENABLE */
 
 #define ERR(fmt, ...)  do {                                             \
