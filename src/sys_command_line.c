@@ -44,13 +44,13 @@ COMMAND_S			CLI_commands[MAX_COMMAND_NB];
 
 
 uint8_t 	cli_help			(int argc, char *argv[]);
-const char 	cli_help_help[] 		= "\r\n[help]\r\n\tshow commands\r\n";
+const char 	cli_help_help[] 		= "show commands";
 
 uint8_t 	cli_clear			(int argc, char *argv[]);
-const char 	cli_clear_help[] 		= "[cls]\r\n\tclear the screen\r\n";
+const char 	cli_clear_help[] 		= "clear the screen";
 
 uint8_t 	cli_reboot			(int argc, char *argv[]);
-const char 	cli_reboot_help[] 		= "[reboot]\r\n\treboot MCU\r\n";
+const char 	cli_reboot_help[] 		= "reboot MCU";
 
 /* These functions need to be redefined over the [_weak] versions defined by GCC in
  * order to make the stdio library functional.*/
@@ -443,15 +443,19 @@ uint8_t cli_help(int argc, char *argv[])
 {
 	if(argc == 1){
 	    for(size_t i = 0; i < MAX_COMMAND_NB; i++) {
-	        if (CLI_commands[i].pHelp) {
-	            printf(CLI_commands[i].pHelp);
-	        }
+	    	if(strcmp(CLI_commands[i].pCmd, "") != 0){
+		    	printf("[%s]\r\n", CLI_commands[i].pCmd);
+		        if (CLI_commands[i].pHelp) {
+		            printf(CLI_commands[i].pHelp);NL2();
+		        }
+	    	}
 	    }
 	    return EXIT_SUCCESS;
 	}else if(argc == 2){
 	    for(size_t i = 0; i < MAX_COMMAND_NB; i++) {
 	    	if(strcmp(CLI_commands[i].pCmd, argv[1]) == 0){
-	    		printf(CLI_commands[i].pHelp);
+		    	printf("[%s]\r\n", CLI_commands[i].pCmd);
+	    		printf(CLI_commands[i].pHelp);NL1();
 	    		return EXIT_SUCCESS;
 	    	}
 	    }
