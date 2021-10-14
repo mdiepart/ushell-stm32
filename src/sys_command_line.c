@@ -290,12 +290,12 @@ static void cli_rx_handle(RX_BUFF_TYPE *rx_buff)
                 if (Handle.len >= 3) {
                     if (strstr((const char *)Handle.buff, KEY_UP) != NULL) {
                         key = 1;
-                        TERMINAL_MOVE_LEFT(Handle.len);
+                        TERMINAL_MOVE_LEFT(Handle.len-3);
                         TERMINAL_CLEAR_END();
                         err = cli_history_show(true, &p_hist_cmd);
                     } else if (strstr((const char *)Handle.buff, KEY_DOWN) != NULL) {
                         key = 2;
-                        TERMINAL_MOVE_LEFT(Handle.len);
+                        TERMINAL_MOVE_LEFT(Handle.len-3);
                         TERMINAL_CLEAR_END();
                         err = cli_history_show(false, &p_hist_cmd);
                     } else if (strstr((const char *)Handle.buff, KEY_RIGHT) != NULL) {
@@ -351,7 +351,7 @@ static void cli_rx_handle(RX_BUFF_TYPE *rx_buff)
         if(Handle.buff[Handle.len - 1] == KEY_ENTER) {
         	NL1();
             Handle.buff[Handle.len - 1] = '\0';
-
+            cli_history_add((char *)Handle.buff);
             char *command = strtok((char *)Handle.buff, " \t");
 
             /* looking for a match */
@@ -379,7 +379,7 @@ static void cli_rx_handle(RX_BUFF_TYPE *rx_buff)
                         /* call the func. */
                     	TERMINAL_HIDE_CURSOR();
                     	uint8_t result = CLI_commands[i].pFun(argc, argv);
-                        cli_history_add((char *)Handle.buff);
+
                         if(result == EXIT_SUCCESS){
                         	PRINTF_COLOR(E_FONT_GREEN, "(%s returned %d)\r\n", command, result);
                         }else{

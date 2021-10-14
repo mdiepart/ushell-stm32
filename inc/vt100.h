@@ -134,16 +134,16 @@ enum {
 #define TERMINAL_DISPLAY_CLEAR()    printf("\033[2J")
 
 /* cursor move up */
-#define TERMINAL_MOVE_UP(x)         printf("\033[%dA", (x))
+#define TERMINAL_MOVE_UP(x)         do{ if(x>0) printf("\033[%dA", (x)); }while(0)
 
 /* cursor move down */
-#define TERMINAL_MOVE_DOWN(x)       printf("\033[%dB", (x))
+#define TERMINAL_MOVE_DOWN(x)       do{ if(x>0) printf("\033[%dB", (x)); }while(0)
 
 /* cursor move left */
-#define TERMINAL_MOVE_LEFT(y)       printf("\033[%dD", (y))
+#define TERMINAL_MOVE_LEFT(y)       do{ if(y>0) printf("\033[%dD", (y)); }while(0)
 
 /* cursor move right */
-#define TERMINAL_MOVE_RIGHT(y)      printf("\033[%dC",(y))
+#define TERMINAL_MOVE_RIGHT(y)      do{ if(y>0) printf("\033[%dC", (y)); }while(0)
 
 /* cursor move to */
 #define TERMINAL_MOVE_TO(x, y)      printf("\033[%d;%dH", (x), (y))
