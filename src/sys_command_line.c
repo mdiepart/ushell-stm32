@@ -24,38 +24,83 @@
 #define RX_BUFF_TYPE        QUEUE64_S
 #define HANDLE_LEN 			128
 
+/*******************************************************************************
+ *
+ * 	Typedefs
+ *
+ ******************************************************************************/
+
+
+/*
+ * Buffer for current line
+ */
 typedef struct {
     uint8_t buff[HANDLE_LEN];
     uint8_t len;
 } HANDLE_TYPE_S;
 
+/*
+ * Command entry
+ */
 typedef struct {
     const char *pCmd;
     const char *pHelp;
     uint8_t (*pFun)(int argc, char *argv[]);
 } COMMAND_S;
 
-RX_BUFF_TYPE        cli_rx_buff;
-unsigned char 		cBuffer;
-RX_BUFF_TYPE 		cli_rx_buff; 				/* 64 bytes FIFO, saving commands from the terminal */
-UART_HandleTypeDef 	*huart_shell;
-COMMAND_S			CLI_commands[MAX_COMMAND_NB];
+/*
+ * Command line history
+ */
+typedef struct {
+    char cmd[HISTORY_MAX][HANDLE_LEN];
+    uint8_t count;
+    uint8_t latest;
+    uint8_t show;
+}HISTORY_S;
 
+/*******************************************************************************
+ *
+ * 	Internal variables
+ *
+ ******************************************************************************/
 
+RX_BUFF_TYPE        	cli_rx_buff;
+unsigned char 			cBuffer;
+RX_BUFF_TYPE 			cli_rx_buff; 				/* 64 bytes FIFO, saving commands from the terminal */
+UART_HandleTypeDef 		*huart_shell;
+COMMAND_S				CLI_commands[MAX_COMMAND_NB];
+static HISTORY_S 		history;
+
+const char 				cli_help_help[] 			= "show commands";
+const char 				cli_clear_help[] 			= "clear the screen";
+const char 				cli_reboot_help[] 			= "reboot MCU";
 bool 					cli_password_ok 			= false;
 
-uint8_t 	cli_help			(int argc, char *argv[]);
-const char 	cli_help_help[] 		= "show commands";
+/*******************************************************************************
+ *
+ * 	Internal functions declaration
+ *
+ ******************************************************************************/
 
-uint8_t 	cli_clear			(int argc, char *argv[]);
-const char 	cli_clear_help[] 		= "clear the screen";
-
-uint8_t 	cli_reboot			(int argc, char *argv[]);
-const char 	cli_reboot_help[] 		= "reboot MCU";
+static void 	cli_history_add			(char* buff);
+static uint8_t 	cli_history_show		(uint8_t mode, char** p_history);
+void 			HAL_UART_RxCpltCallback	(UART_HandleTypeDef * huart);
+static void 	cli_rx_handle			(RX_BUFF_TYPE *rx_buff);
+static void 	cli_tx_handle			(void);
+uint8_t 		cli_help				(int argc, char *argv[]);
+uint8_t 		cli_clear				(int argc, char *argv[]);
+uint8_t 		cli_reboot				(int argc, char *argv[]);
+void 			cli_add_command			(const char *command, const char *help, uint8_t (*exec)(int argc, char *argv[]));
 void 			greet					(void);
 
-/* These functions need to be redefined over the [_weak] versions defined by GCC in
- * order to make the stdio library functional.*/
+
+/*******************************************************************************
+ *
+ * 	These functions need to be redefined over the [_weak] versions defined by
+ * 	GCC in order to make the stdio library functional.
+ *
+ ******************************************************************************/
+
 #if CLI_ENABLE
 int _write(int file, char *data, int len){
 	if(file != STDOUT_FILENO && file != STDERR_FILENO){
@@ -82,28 +127,16 @@ int _isatty(int file){
 		return 0;
 	}
 }
-
-/*int _read(int file, char *data, int len){}*/
-/*int _close(int file){}*/
-/*int _lseek(int file, int ptr, int dir){}*/
-/*int _fstat(int file, struct stat *st){}*/
 #endif /* CLI_ENABLE */
 
-/*
- * Command line history
- */
-typedef struct {
-    char cmd[HISTORY_MAX][HANDLE_LEN];
-    uint8_t count;
-    uint8_t latest;
-    uint8_t show;
-}HISTORY_S;
-
-static HISTORY_S history;
-
+/*******************************************************************************
+ *
+ * 	Functions definitions
+ *
+ ******************************************************************************/
 
 /**
-  * @brief          add a history command
+  * @brief          add a command to the history
   * @param  buff:   command
   * @retval         null
   */
@@ -143,7 +176,7 @@ static void cli_history_add(char* buff)
 
 
 /**
-  * @brief              display history command
+  * @brief              returns a command from the history
   * @param  mode:       TRUE for look up, FALSE for look down
   * @param  p_history:  target history command
   * @retval             TRUE for no history found, FALSE for success
@@ -212,6 +245,9 @@ void cli_init(UART_HandleTypeDef *handle_uart)
 
 }
 
+/*
+ * Callback function for UART IRQ when it is done receivign a char
+ */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef * huart){
 	QUEUE_PUT(cli_rx_buff, cBuffer);
 	HAL_UART_Receive_IT(huart, &cBuffer, 1);
@@ -236,7 +272,6 @@ static void cli_rx_handle(RX_BUFF_TYPE *rx_buff)
      */
     bool newChar = true;
     while(newChar) {
-
         if(Handle.len < HANDLE_LEN) {  /* check the buffer */
         	newChar = QUEUE_GET((*rx_buff), Handle.buff[Handle.len]);
 
@@ -405,7 +440,7 @@ static void cli_rx_handle(RX_BUFF_TYPE *rx_buff)
 
 
 /**
-  * @brief  tx handle
+  * @brief  tx handle, flushes stdout buffer
   * @param  null
   * @retval null
   */
@@ -420,6 +455,39 @@ void cli_run(void)
     cli_tx_handle();
 }
 
+void greet(void){
+    NL1();
+    TERMINAL_BACK_DEFAULT(); /* set terminal background color: black */
+    TERMINAL_DISPLAY_CLEAR();
+    TERMINAL_RESET_CURSOR();
+    TERMINAL_FONT_BLUE();
+    printf("                             ///////////////////////////////////////////    ");NL1();
+    printf("                             /////*   .////////////////////////     *///    ");NL1();
+    printf("            %%%%%%         %%%%%%  ///   ////  //   //////////  //   ////   //    ");NL1();
+    printf("            %%%%%%        %%%%%%   ///  //////////   ////////  ///  //////////    ");NL1();
+    printf("           %%%%%%        %%%%%%%%   ((((   (((((((((   ((((((  (((((   .(((((((    ");NL1();
+    printf("          %%%%%%        %%%%%%%%    (((((((    (((((((  ((((  (((((((((    ((((    ");NL1();
+    printf("          %%%%%%      %%%%  %%%%    ((((((((((   ((((((  ((  ((((((((((((((  ((    ");NL1();
+    printf("         %%%%%%%%    %%%%%%   %%%%%%%%  (((*((((((  .(((((((    ((((((( ((((((   ((    ");NL1();
+    printf("         %%%%*%%%%%%%%%%%%           (((        (((((((((   ((((((((        ((((    ");NL1();
+    printf("        %%%%   %%%%.             ###################   ##################### (((");NL1();
+    printf("       %%%%%%          (((      ##################   ##################((((((( ");NL1();
+    printf("       %%%%               (((( #################   ##############(((((((##    ");NL1();
+    printf("      %%%%%%                   (((((((((##################((((((((((#######    ");NL1();
+    printf("     %%%%%%                     ########(((((((((((((((((((################    ");NL1();
+    printf("     %%%%%%                     ##%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%    ");NL1();
+    printf("    %%%%%%                      %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    ");NL1();
+    printf("    %%%%%%                      %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    ");NL1();
+    printf("                             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    ");NL1();
+    printf("                             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    ");NL1();
+    printf("µShell v0.1 - by Morgan Diepart (mdiepart@uliege.be)");NL1();
+    printf("Original work from https://github.com/ShareCat/STM32CommandLine");NL1();
+    printf("-------------------------------");
+    NL2();
+    TERMINAL_FONT_DEFAULT();
+    PRINT_CLI_NAME();
+    TERMINAL_SHOW_CURSOR();
+}
 
 /*************************************************************************************
  * Shell builtin functions
@@ -512,38 +580,4 @@ void cli_add_command(const char *command, const char *help, uint8_t (*exec)(int 
 	if(i == MAX_COMMAND_NB){
 		PRINTF_COLOR(E_FONT_RED, "Cannot add command %s, max number of command reached. The maximum number of command is set to %d.\r\n", command, MAX_COMMAND_NB);
 	}
-}
-
-void greet(void){
-    NL1();
-    TERMINAL_BACK_DEFAULT(); /* set terminal background color: black */
-    TERMINAL_DISPLAY_CLEAR();
-    TERMINAL_RESET_CURSOR();
-    TERMINAL_FONT_BLUE();
-    printf("                             ///////////////////////////////////////////    ");NL1();
-    printf("                             /////*   .////////////////////////     *///    ");NL1();
-    printf("            %%%%%%         %%%%%%  ///   ////  //   //////////  //   ////   //    ");NL1();
-    printf("            %%%%%%        %%%%%%   ///  //////////   ////////  ///  //////////    ");NL1();
-    printf("           %%%%%%        %%%%%%%%   ((((   (((((((((   ((((((  (((((   .(((((((    ");NL1();
-    printf("          %%%%%%        %%%%%%%%    (((((((    (((((((  ((((  (((((((((    ((((    ");NL1();
-    printf("          %%%%%%      %%%%  %%%%    ((((((((((   ((((((  ((  ((((((((((((((  ((    ");NL1();
-    printf("         %%%%%%%%    %%%%%%   %%%%%%%%  (((*((((((  .(((((((    ((((((( ((((((   ((    ");NL1();
-    printf("         %%%%*%%%%%%%%%%%%           (((        (((((((((   ((((((((        ((((    ");NL1();
-    printf("        %%%%   %%%%.             ###################   ##################### (((");NL1();
-    printf("       %%%%%%          (((      ##################   ##################((((((( ");NL1();
-    printf("       %%%%               (((( #################   ##############(((((((##    ");NL1();
-    printf("      %%%%%%                   (((((((((##################((((((((((#######    ");NL1();
-    printf("     %%%%%%                     ########(((((((((((((((((((################    ");NL1();
-    printf("     %%%%%%                     ##%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%    ");NL1();
-    printf("    %%%%%%                      %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    ");NL1();
-    printf("    %%%%%%                      %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    ");NL1();
-    printf("                             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    ");NL1();
-    printf("                             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    ");NL1();
-    printf("µShell v0.1 - by Morgan Diepart (mdiepart@uliege.be)");NL1();
-    printf("Original work from https://github.com/ShareCat/STM32CommandLine");NL1();
-    printf("-------------------------------");
-    NL2();
-    TERMINAL_FONT_DEFAULT();
-    PRINT_CLI_NAME();
-    TERMINAL_SHOW_CURSOR();
 }
