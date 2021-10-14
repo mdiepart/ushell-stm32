@@ -42,6 +42,7 @@ UART_HandleTypeDef 	*huart_shell;
 COMMAND_S			CLI_commands[MAX_COMMAND_NB];
 
 
+bool 					cli_password_ok 			= false;
 
 uint8_t 	cli_help			(int argc, char *argv[]);
 const char 	cli_help_help[] 		= "show commands";
@@ -51,6 +52,7 @@ const char 	cli_clear_help[] 		= "clear the screen";
 
 uint8_t 	cli_reboot			(int argc, char *argv[]);
 const char 	cli_reboot_help[] 		= "reboot MCU";
+void 			greet					(void);
 
 /* These functions need to be redefined over the [_weak] versions defined by GCC in
  * order to make the stdio library functional.*/
@@ -202,36 +204,12 @@ void cli_init(UART_HandleTypeDef *handle_uart)
     CLI_ADD_CMD("cls", cli_clear_help, cli_clear);
     CLI_ADD_CMD("reboot", cli_reboot_help, cli_reboot);
 
-    NL1();
-    TERMINAL_BACK_DEFAULT(); /* set terminal background color: black */
-    TERMINAL_DISPLAY_CLEAR();
-    TERMINAL_RESET_CURSOR();
-    TERMINAL_FONT_BLUE();
-    printf("                             ///////////////////////////////////////////    ");NL1();
-    printf("                             /////*   .////////////////////////     *///    ");NL1();
-    printf("            %%%%%%         %%%%%%  ///   ////  //   //////////  //   ////   //    ");NL1();
-    printf("            %%%%%%        %%%%%%   ///  //////////   ////////  ///  //////////    ");NL1();
-    printf("           %%%%%%        %%%%%%%%   ((((   (((((((((   ((((((  (((((   .(((((((    ");NL1();
-    printf("          %%%%%%        %%%%%%%%    (((((((    (((((((  ((((  (((((((((    ((((    ");NL1();
-    printf("          %%%%%%      %%%%  %%%%    ((((((((((   ((((((  ((  ((((((((((((((  ((    ");NL1();
-    printf("         %%%%%%%%    %%%%%%   %%%%%%%%  (((*((((((  .(((((((    ((((((( ((((((   ((    ");NL1();
-    printf("         %%%%*%%%%%%%%%%%%           (((        (((((((((   ((((((((        ((((    ");NL1();
-    printf("        %%%%   %%%%.             ###################   ##################### (((");NL1();
-    printf("       %%%%%%          (((      ##################   ##################((((((( ");NL1();
-    printf("       %%%%               (((( #################   ##############(((((((##    ");NL1();
-    printf("      %%%%%%                   (((((((((##################((((((((((#######    ");NL1();
-    printf("     %%%%%%                     ########(((((((((((((((((((################    ");NL1();
-    printf("     %%%%%%                     ##%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%    ");NL1();
-    printf("    %%%%%%                      %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    ");NL1();
-    printf("    %%%%%%                      %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    ");NL1();
-    printf("                             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    ");NL1();
-    printf("                             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    ");NL1();
-    printf("µShell v0.1 - by Morgan Diepart (mdiepart@uliege.be)");NL1();
-    printf("Original work from https://github.com/ShareCat/STM32CommandLine");NL1();
-    printf("-------------------------------");NL3();
-    TERMINAL_FONT_DEFAULT();
-    PRINT_CLI_NAME();
-    TERMINAL_SHOW_CURSOR();
+#ifndef CLI_PASSWORD
+    cli_password_ok = true;
+    greet();
+#endif
+
+
 }
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef * huart){
@@ -281,7 +259,7 @@ static void cli_rx_handle(RX_BUFF_TYPE *rx_buff)
                     Handle.len++;
                 }
 
-            } else {
+            } else if(cli_password_ok){
                 /* all chars copied to Handle.buff */
                 uint8_t key = 0;
                 uint8_t err = 0xff;
@@ -342,6 +320,18 @@ static void cli_rx_handle(RX_BUFF_TYPE *rx_buff)
      */
     if(!exec_req){
     	return;
+    }else if(!cli_password_ok){
+#ifdef CLI_PASSWORD
+    	Handle.buff[Handle.len-1] = '\0';
+    	if(strcmp((char *)Handle.buff, CLI_PASSWORD) == 0){
+    		cli_password_ok = true;
+    		greet();
+    	}
+    	Handle.len = 0;
+#else
+    	cli_password_ok = true;
+    	greet();
+#endif
     }else if((Handle.len == 1) && (Handle.buff[0] == KEY_ENTER)) {
         /* KEY_ENTER -->ENTER key from terminal */
     	PRINT_CLI_NAME();
@@ -522,4 +512,38 @@ void cli_add_command(const char *command, const char *help, uint8_t (*exec)(int 
 	if(i == MAX_COMMAND_NB){
 		PRINTF_COLOR(E_FONT_RED, "Cannot add command %s, max number of command reached. The maximum number of command is set to %d.\r\n", command, MAX_COMMAND_NB);
 	}
+}
+
+void greet(void){
+    NL1();
+    TERMINAL_BACK_DEFAULT(); /* set terminal background color: black */
+    TERMINAL_DISPLAY_CLEAR();
+    TERMINAL_RESET_CURSOR();
+    TERMINAL_FONT_BLUE();
+    printf("                             ///////////////////////////////////////////    ");NL1();
+    printf("                             /////*   .////////////////////////     *///    ");NL1();
+    printf("            %%%%%%         %%%%%%  ///   ////  //   //////////  //   ////   //    ");NL1();
+    printf("            %%%%%%        %%%%%%   ///  //////////   ////////  ///  //////////    ");NL1();
+    printf("           %%%%%%        %%%%%%%%   ((((   (((((((((   ((((((  (((((   .(((((((    ");NL1();
+    printf("          %%%%%%        %%%%%%%%    (((((((    (((((((  ((((  (((((((((    ((((    ");NL1();
+    printf("          %%%%%%      %%%%  %%%%    ((((((((((   ((((((  ((  ((((((((((((((  ((    ");NL1();
+    printf("         %%%%%%%%    %%%%%%   %%%%%%%%  (((*((((((  .(((((((    ((((((( ((((((   ((    ");NL1();
+    printf("         %%%%*%%%%%%%%%%%%           (((        (((((((((   ((((((((        ((((    ");NL1();
+    printf("        %%%%   %%%%.             ###################   ##################### (((");NL1();
+    printf("       %%%%%%          (((      ##################   ##################((((((( ");NL1();
+    printf("       %%%%               (((( #################   ##############(((((((##    ");NL1();
+    printf("      %%%%%%                   (((((((((##################((((((((((#######    ");NL1();
+    printf("     %%%%%%                     ########(((((((((((((((((((################    ");NL1();
+    printf("     %%%%%%                     ##%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%    ");NL1();
+    printf("    %%%%%%                      %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    ");NL1();
+    printf("    %%%%%%                      %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    ");NL1();
+    printf("                             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    ");NL1();
+    printf("                             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    ");NL1();
+    printf("µShell v0.1 - by Morgan Diepart (mdiepart@uliege.be)");NL1();
+    printf("Original work from https://github.com/ShareCat/STM32CommandLine");NL1();
+    printf("-------------------------------");
+    NL2();
+    TERMINAL_FONT_DEFAULT();
+    PRINT_CLI_NAME();
+    TERMINAL_SHOW_CURSOR();
 }
