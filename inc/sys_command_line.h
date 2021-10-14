@@ -27,6 +27,7 @@
 #define CLI_NAME			"vitapatch_bioz"	/* Device name shown in the shell */
 #define MAX_COMMAND_NB		32
 #define MAX_ARGC			8
+#define MAX_LINE_LEN 		80
 //#define CLI_PASSWORD		""					/* uncomment to set a password. "" correspond to empty password (juste press enter to display shell) */
 
 #if CLI_ENABLE

@@ -22,7 +22,6 @@
 #include "../inc/sys_command_line.h"
 
 #define RX_BUFF_TYPE        QUEUE64_S
-#define HANDLE_LEN 			128
 
 /*******************************************************************************
  *
@@ -35,7 +34,7 @@
  * Buffer for current line
  */
 typedef struct {
-    uint8_t buff[HANDLE_LEN];
+    uint8_t buff[MAX_LINE_LEN];
     uint8_t len;
 } HANDLE_TYPE_S;
 
@@ -52,7 +51,7 @@ typedef struct {
  * Command line history
  */
 typedef struct {
-    char cmd[HISTORY_MAX][HANDLE_LEN];
+    char cmd[HISTORY_MAX][MAX_LINE_LEN];
     uint8_t count;
     uint8_t latest;
     uint8_t show;
@@ -148,7 +147,7 @@ static void cli_history_add(char* buff)
     if (NULL == buff) return;
 
     len = strlen((const char *)buff);
-    if (len >= HANDLE_LEN) return;  /* command too long */
+    if (len >= MAX_LINE_LEN) return;  /* command too long */
 
     /* find the latest one */
     if (0 != index) {
@@ -159,7 +158,7 @@ static void cli_history_add(char* buff)
 
     if (0 != memcmp(history.cmd[index], buff, len)) {
         /* if the new one is different with the latest one, the save */
-        memset((void *)history.cmd[history.latest], 0x00, HANDLE_LEN);
+        memset((void *)history.cmd[history.latest], 0x00, MAX_LINE_LEN);
         memcpy((void *)history.cmd[history.latest], (const void *)buff, len);
         if (history.count < HISTORY_MAX) {
             history.count++;
@@ -272,7 +271,7 @@ static void cli_rx_handle(RX_BUFF_TYPE *rx_buff)
      */
     bool newChar = true;
     while(newChar) {
-        if(Handle.len < HANDLE_LEN) {  /* check the buffer */
+        if(Handle.len < MAX_LINE_LEN) {  /* check the buffer */
         	newChar = QUEUE_GET((*rx_buff), Handle.buff[Handle.len]);
 
             /* new char coming from the terminal, copy it to Handle.buff */
@@ -353,9 +352,7 @@ static void cli_rx_handle(RX_BUFF_TYPE *rx_buff)
         Step2: handle the commands
         ---------------------------------------
      */
-    if(!exec_req){
-    	return;
-    }else if(!cli_password_ok){
+    if(exec_req && !cli_password_ok){
 #ifdef CLI_PASSWORD
     	Handle.buff[Handle.len-1] = '\0';
     	if(strcmp((char *)Handle.buff, CLI_PASSWORD) == 0){
@@ -367,72 +364,70 @@ static void cli_rx_handle(RX_BUFF_TYPE *rx_buff)
     	cli_password_ok = true;
     	greet();
 #endif
-    }else if((Handle.len == 1) && (Handle.buff[0] == KEY_ENTER)) {
+    }else if(exec_req && (Handle.len == 1)) {
         /* KEY_ENTER -->ENTER key from terminal */
     	PRINT_CLI_NAME();
         Handle.len = 0;
-    } else if(Handle.len > 1) {  /* check for the length of command */
-        /* a command must ending with KEY_ENTER */
-        if(Handle.buff[Handle.len - 1] == KEY_ENTER) {
-        	NL1();
-            Handle.buff[Handle.len - 1] = '\0';
-            cli_history_add((char *)Handle.buff);
-            char *command = strtok((char *)Handle.buff, " \t");
+    } else if(exec_req && Handle.len > 1) {  /* check for the length of command */
+		NL1();
+		Handle.buff[Handle.len - 1] = '\0';
+		cli_history_add((char *)Handle.buff);
+		char *command = strtok((char *)Handle.buff, " \t");
 
-            /* looking for a match */
-            for(i = 0; i < MAX_COMMAND_NB; i++) {
-                if(0 == strcmp(command, CLI_commands[i].pCmd)) {
-                    cmd_match = true;
+		/* looking for a match */
+		for(i = 0; i < MAX_COMMAND_NB; i++) {
+			if(0 == strcmp(command, CLI_commands[i].pCmd)) {
+				cmd_match = true;
 
-                    //Split arguments string to argc/argv
-                    uint8_t argc = 1;
-                    char 	*argv[MAX_ARGC];
-                    argv[0] = command;
+				//Split arguments string to argc/argv
+				uint8_t argc = 1;
+				char 	*argv[MAX_ARGC];
+				argv[0] = command;
 
-                    char *token = strtok(NULL, " \t");
-                    while(token != NULL){
-                    	if(argc >= MAX_ARGC){
-                    		PRINTF_COLOR(E_FONT_RED, "Maximum number of arguments is %d. Ignoring the rest of the arguments.\r\n", MAX_ARGC-1);
-                    		break;
-                    	}
-                    	argv[argc] = token;
-                    	argc++;
-                    	token = strtok(NULL, " \t");
-                    }
+				char *token = strtok(NULL, " \t");
+				while(token != NULL){
+					if(argc >= MAX_ARGC){
+						PRINTF_COLOR(E_FONT_RED, "Maximum number of arguments is %d. Ignoring the rest of the arguments.\r\n", MAX_ARGC-1);
+						break;
+					}
+					argv[argc] = token;
+					argc++;
+					token = strtok(NULL, " \t");
+				}
 
-                    if(CLI_commands[i].pFun != NULL) {
-                        /* call the func. */
-                    	TERMINAL_HIDE_CURSOR();
-                    	uint8_t result = CLI_commands[i].pFun(argc, argv);
+				if(CLI_commands[i].pFun != NULL) {
+					/* call the func. */
+					TERMINAL_HIDE_CURSOR();
+					uint8_t result = CLI_commands[i].pFun(argc, argv);
 
-                        if(result == EXIT_SUCCESS){
-                        	PRINTF_COLOR(E_FONT_GREEN, "(%s returned %d)\r\n", command, result);
-                        }else{
-                        	PRINTF_COLOR(E_FONT_RED, "(%s returned %d)\r\n", command, result);
-                        }
-                        TERMINAL_SHOW_CURSOR();
-                        break;
-                    } else {
-                        /* func. is void */
-                        PRINTF_COLOR(E_FONT_RED, "Command %s exists but no function is associated to it.\r\n", command);
-                    }
-                }
-            }
+					if(result == EXIT_SUCCESS){
+						PRINTF_COLOR(E_FONT_GREEN, "(%s returned %d)\r\n", command, result);
+					}else{
+						PRINTF_COLOR(E_FONT_RED, "(%s returned %d)\r\n", command, result);
+					}
+					TERMINAL_SHOW_CURSOR();
+					break;
+				} else {
+					/* func. is void */
+					PRINTF_COLOR(E_FONT_RED, "Command %s exists but no function is associated to it.\r\n", command);
+				}
+			}
+		}
 
-            if(!cmd_match) {
-                /* no matching command */
-                printf("\r\nCommand \"%s\" unknown, try: help\r\n", Handle.buff);
-            }
+		if(!cmd_match) {
+			/* no matching command */
+			printf("\r\nCommand \"%s\" unknown, try: help\r\n", Handle.buff);
+		}
 
-            Handle.len = 0;
-            PRINT_CLI_NAME();
-        }
+		Handle.len = 0;
+		PRINT_CLI_NAME();
+
     }
 
 
-    if(Handle.len >= HANDLE_LEN) {
+    if(Handle.len >= MAX_LINE_LEN) {
         /* full, so restart the count */
-    	PRINTF_COLOR(E_FONT_RED, "Max command length is %d.\r\n", HANDLE_LEN-1);
+    	PRINTF_COLOR(E_FONT_RED, "\r\nMax command length is %d.\r\n", MAX_LINE_LEN-1);
     	PRINT_CLI_NAME();
         Handle.len = 0;
     }
