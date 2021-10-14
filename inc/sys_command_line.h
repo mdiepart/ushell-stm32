@@ -43,7 +43,8 @@
 
 #define ERR(fmt, ...)  do {                                             \
                             TERMINAL_FONT_RED();                        \
-                            printf("### ERROR ### %s(%d): "fmt"\r\n",   \
+                            fprintf(stderr,								\
+								"### ERROR ### %s(%d): "fmt"\r\n",  	\
                                 __FUNCTION__, __LINE__, __VA_ARGS__);   \
                             TERMINAL_FONT_DEFAULT();                    \
                         }while(0)
@@ -64,7 +65,8 @@
 #define DIE(fmt)        do {                                            \
                             TERMINAL_FONT_RED();                        \
                             TERMINAL_HIGHLIGHT();                       \
-                            printf("### DIE ### %s(%d): "fmt"\r\n",     \
+                            fprintf(stderr, 							\
+								"### DIE ### %s(%d): "fmt"\r\n",     	\
                                 __FUNCTION__, __LINE__);                \
                         } while(1) /* infinite loop */
 
