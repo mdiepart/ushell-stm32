@@ -260,7 +260,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef * huart){
   */
 static void cli_rx_handle(RX_BUFF_TYPE *rx_buff)
 {
-    static HANDLE_TYPE_S Handle = {.len = 0};
+    static HANDLE_TYPE_S Handle = {.len = 0, .buff = {0}};
     uint8_t i = Handle.len;
     uint8_t cmd_match = false;
     uint8_t exec_req = false;
