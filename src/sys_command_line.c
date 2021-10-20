@@ -277,19 +277,23 @@ static void cli_rx_handle(RX_BUFF_TYPE *rx_buff)
             /* new char coming from the terminal, copy it to Handle.buff */
             if(newChar) {
                 /* KEY_BACKSPACE -->get DELETE key from keyboard */
-                if (Handle.buff[Handle.len] == KEY_BACKSPACE) {
+                if (Handle.buff[Handle.len] == KEY_BACKSPACE || Handle.buff[Handle.len] == KEY_DEL) {
                     /* buffer not empty */
                     if (Handle.len > 0) {
                         /* delete a char in terminal */
                         TERMINAL_MOVE_LEFT(1);
                         TERMINAL_CLEAR_END();
+                        Handle.buff[Handle.len] = '\0';
                         Handle.len--;
                     }
 
                 } else if(Handle.buff[Handle.len] == KEY_ENTER){
                 	exec_req = true;
                 	Handle.len++;
-                }else{
+                }else if(strstr((const char *)Handle.buff, KEY_DELETE) != NULL){
+                	strcpy((char *)&Handle.buff[Handle.len-3], (char *)&Handle.buff[Handle.len+1]);
+                	Handle.len -= 3;
+            	}else{
                     Handle.len++;
                 }
 
@@ -325,7 +329,7 @@ static void cli_rx_handle(RX_BUFF_TYPE *rx_buff)
                             printf("%s", Handle.buff);  /* display history command */
                         } else if (err && (0 != key)) {
                             /* no history found */
-                            TERMINAL_MOVE_LEFT(Handle.len);
+                            TERMINAL_MOVE_LEFT(Handle.len-3);
                             TERMINAL_CLEAR_END();
                             memset(&Handle, 0x00, sizeof(Handle));
                         }

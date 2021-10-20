@@ -16,6 +16,8 @@
 #define KEY_LEFT            "\x1b\x5b\x44"  /* [left] key: 0x1b 0x5b 0x44 */
 #define KEY_ENTER           '\r'            /* [enter] key */
 #define KEY_BACKSPACE       '\b'            /* [backspace] key */
+#define KEY_DEL				'\x7f'			/* [DEL] key */
+#define KEY_DELETE			"\x1b\x5b\x33\x7e" /*[Delete] key */
 
 enum {
     E_FONT_BLACK,
