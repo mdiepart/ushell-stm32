@@ -45,29 +45,29 @@
                             TERMINAL_FONT_RED();                        \
                             fprintf(stderr,								\
 								"### ERROR ### %s(%d): "fmt"\r\n",  	\
-                                __FUNCTION__, __LINE__, __VA_ARGS__);   \
+                                __FUNCTION__, __LINE__, ##__VA_ARGS__); \
                             TERMINAL_FONT_DEFAULT();                    \
                         }while(0)
 
 #define LOG(fmt, ...)  do {                                             \
                             TERMINAL_FONT_CYAN();                       \
-                            printf("[Log]: "fmt"\r\n", __VA_ARGS__);    \
+                            printf("[Log]: "fmt"\r\n", ##__VA_ARGS__);  \
                             TERMINAL_FONT_DEFAULT();                    \
                         } while(0)
 
 #define DBG(fmt, ...)  do {                                             \
                             TERMINAL_FONT_YELLOW();                     \
                             printf("[Debug] %s(%d): "fmt"\r\n",         \
-                                __FUNCTION__, __LINE__, __VA_ARGS__);   \
+                                __FUNCTION__, __LINE__, ##__VA_ARGS__); \
                                 TERMINAL_FONT_DEFAULT();                \
                         } while(0)
 
-#define DIE(fmt)        do {                                            \
+#define DIE(fmt, ...)        do {                                       \
                             TERMINAL_FONT_RED();                        \
                             TERMINAL_HIGHLIGHT();                       \
                             fprintf(stderr, 							\
 								"### DIE ### %s(%d): "fmt"\r\n",     	\
-                                __FUNCTION__, __LINE__);                \
+                                __FUNCTION__, __LINE__, ##__VA_ARGS__); \
                         } while(1) /* infinite loop */
 
 #define NL1()           do { printf("\r\n"); } while(0)
