@@ -42,11 +42,9 @@
 #endif /* CLI_ENABLE */
 
 #define ERR(fmt, ...)  do {                                             \
-                            TERMINAL_FONT_RED();                        \
                             fprintf(stderr,								\
-								"### ERROR ### %s(%d): "fmt"\r\n",  	\
+								"\033[1;31m[ERROR] %s(%d): "fmt"\r\n\033[1;37m",  	\
                                 __FUNCTION__, __LINE__, ##__VA_ARGS__); \
-                            TERMINAL_FONT_DEFAULT();                    \
                         }while(0)
 
 #define LOG(fmt, ...)  do {                                             \
