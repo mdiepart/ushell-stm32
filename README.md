@@ -1,47 +1,119 @@
-# STM32CommandLine
+# µShell
+
+Original work from ShareCat (https://github.com/ShareCat/STM32CommandLine)
 
 ___
 
-## 1. DEMO
-- **1.1** ：Connect the MCU and Xshell with UART port.
+## 1. Introduction
+
+This project is a command line interface (CLI) created to implement a shell on an STM32 device. It uses the Generic parts of the Hardware Abstraction Layer (HAL) interfaces and should thus be compatible with most ARM microcontrollers from ST Microelectronics.
+
+### 1.1 Features
+
+* Supports colored outputs and, more generally most functionality you can expect from a VT100 terminal.
+* 10 commands deep history (using the up and down arrows) to recall previously entered commands.
+* possibility to add your own commands
+* Pre-implemented commands : help, reset, cls.
+* LOG, DBG, ERR macros to quickly print debug statements and display their location in the code.
+* Password protection
+* Implements the required functions to use `stdio` functions as usual, with the shell (i.e. `printf` will print text on the terminal).
+
+## 2. Installation
+
+### 2.1 Configuring the project (CubeMX)
+
+In order to use the shell, the CubeMX project must be configured correctly. The UART that you are gonna use must be enabled and the global interrupts for that UART must be enabled too. The parameters of the UART (such as baudrate, Word length, Parity, ...) do not matter as long as you use the same parameters in the software you use on your computer.
+
+<img src=".\Doc\CubeMX_UART_Config.png" alt="CubeMX_UART_Config" style="zoom: 80%;" />
+
+### 2.2 Installing the files
+
+To install the shell into an existing project, simply copy the source files into your project.
+
+If you are using STM32CubeIDE it should look something like this:
+
+![STM32CubeIDE_Files](.\Doc\STM32CubeIDE_Files.png)
+
+## 3. Using the Shell for the first time
+
+### 3.1 Include File
+
+In order to use the shell you must first include the correct header files. 
+In this example a simple "Hello, World !" example will be created in the main function. For that you need to add the line 
+
+```c
+#include "../shell/inc/sys_command_line.h"
 ```
-   | | |                _.--------._
-  .-----.               |    PC    |
---|o    |----UART_TX----|  Xshell  |
---|     |----UART_RX----|          |
-  '-----'               '----------'
-   | | |
+
+at the top of your main file. If your file was generated using CubeMX, you need to put between the comments `/* USER CODE BEGIN Includes */ ` and `/* USER CODE END Includes */`.
+
+### 3.2 Running the CLI
+
+* Then the CLI needs to be initialized. This must be done after the UART is initialized.
+  In this example,  add the line 
+
+```c
+CLI_INIT(&huart1);	
 ```
-- **1.2** ：Check this demo: (My terminal: Xshell, you can also choose SecureCRT if you like)
-<img src="./Doc/demo.gif" width = "851" height = "576" alt="demo.gif" align=center />
 
-- **1.3** ：Here is my configurations of Xshell:
-![Xshell_Appearance](Doc/Xshell_Terminal.png)
-![Xshell_Keyboard](Doc/Xshell_Keyboard.png)
-![Xshell_VT_Modes](Doc/Xshell_VT_Modes.png)
-![Xshell_Advanced](Doc/Xshell_Advanced.png)
-![Xshell_Appearance](Doc/Xshell_Appearance.png)
+​	between the comments ` /* USER CODE BEGIN 2 */` and `/* USER CODE END 2 */`.
 
-___
+* And finally in order to process the commands add the line `CLI_RUN();` inside of the main loop of your program.
 
-## 2. 介绍（[English](#2-introduction)）
-- **2.1** ：一个**命令行**运行在stm32上，只需要提供一个串口即可实现。
-- **2.2** ：配合队列处理串口数据，快速响应并退出中断。
-- **2.3** ：可以移植到任意嵌入式系统，甚至51、AVR、PIC、stm8s等。
-- **2.4** ：命令支持后续扩展，**支持多种颜色**的log输出到终端，方便调试。
-- **2.5** ：支持历史命令查询，历史命令条数可自定义。
+### 3.3 Adding new commands
 
-___
+In order to add a new command to the shell, use the function 
 
-## 2. Introduction
+```c
+CLI_ADD_CMD(const char *command, const char *help, uint8_t (*exec)(int argc, char *argv[]) )
+```
 
-- **2.1** : This project is a shell, a CLI(command line interface) like linux shell, demo project is based on STM32(a serial com port is needed).
-- **2.2** : A fifo queue added for faster IRQ handler.
-- **2.3** : You can port this shell into an embeded system, even 51, AVR, PIC, stm8s and so on..
-- **2.4** : You can also add your own commands, it is helpful for programmers to debug, also support **colorful debug fonts**.
-- **2.5** : History command support, and modify the amount of history that you want to save.
+Where :
+
+* `*command` is a c string containing the command to enter in the shell to execute the corresponding function,
+
+* `*help` is a c string that will be displayed when using the command `help`
+
+* `*exec` is a pointer to a function that will be executed when the corresponding command is entered. The prototype of the function needs to be 
+
+  ```c
+  uint8_t foo(int argc, char *argv[]);
+  ```
+
+   The parameters in the line calling the command will be placed in `*argv[]` and the number of arguments will be placed in `argc`
+
+  Example:
+
+  If you add the following command: 
+
+  ```
+  CLI_ADD_CMD("my_command", "My first command", my_command);
+  ...
+  uint8_t my_command(int argc, char *argv[]){
+  ...
+  }
+  ```
+
+  and then you enter the following line in the shell:
+
+  ```
+  my_command arg1 arg2 arg3	
+  ```
+
+  you will have:
+
+  ```
+  argc = 4
+  argv[0] = "my_command"
+  argv[1] = "arg1"
+  argv[2] = "arg2"
+  argv[3] = "arg3"
+  ```
+
+  .
+
+  The function must then return `EXIT_SUCCESS` if it executed successfully or  `EXIT_FAILURE` if a problem happened. These two macros are defined in `stdlib.h`.
 
 ## 3. TODO
-- Login Support.
-- Command Completion.
-- Need Your Advise.
+
+- Fix a few bugs here and there
