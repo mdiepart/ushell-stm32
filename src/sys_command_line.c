@@ -72,7 +72,7 @@ static HISTORY_S 		history;
 
 const char 				cli_help_help[] 			= "show commands";
 const char 				cli_clear_help[] 			= "clear the screen";
-const char 				cli_reboot_help[] 			= "reboot MCU";
+const char 				cli_reset_help[] 			= "reboot MCU";
 bool 					cli_password_ok 			= false;
 
 /*******************************************************************************
@@ -88,7 +88,7 @@ static void 	cli_rx_handle			(RX_BUFF_TYPE *rx_buff);
 static void 	cli_tx_handle			(void);
 uint8_t 		cli_help				(int argc, char *argv[]);
 uint8_t 		cli_clear				(int argc, char *argv[]);
-uint8_t 		cli_reboot				(int argc, char *argv[]);
+uint8_t 		cli_reset				(int argc, char *argv[]);
 void 			cli_add_command			(const char *command, const char *help, uint8_t (*exec)(int argc, char *argv[]));
 void 			greet					(void);
 
@@ -232,7 +232,7 @@ void cli_init(UART_HandleTypeDef *handle_uart)
 
     cli_add_command("help", cli_help_help, cli_help);
     cli_add_command("cls", cli_clear_help, cli_clear);
-    cli_add_command("reboot", cli_reboot_help, cli_reboot);
+    cli_add_command("reset", cli_reset_help, cli_reset);
 
 #ifndef CLI_PASSWORD
     cli_password_ok = true;
@@ -552,7 +552,7 @@ uint8_t cli_clear(int argc, char *argv[])
   * @param  para addr. & length
   * @retval True means OK
   */
-uint8_t cli_reboot(int argc, char *argv[])
+uint8_t cli_reset(int argc, char *argv[])
 {
 	if(argc > 1){
 		printf("Command \"%s\" takes no argument.", argv[0]);NL1();
