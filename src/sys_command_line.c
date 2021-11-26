@@ -96,7 +96,7 @@ void 			greet					(void);
 /*******************************************************************************
  *
  * 	These functions need to be redefined over the [_weak] versions defined by
- * 	GCC in order to make the stdio library functional.
+ * 	GCC (or in syscalls.c by cubeMX) to make the stdio library functional.
  *
  ******************************************************************************/
 
@@ -115,7 +115,7 @@ int _write(int file, char *data, int len){
 	}
 }
 
-int _isatty(int file){
+__attribute__((weak)) int _isatty(int file){
 	switch(file){
 	case STDERR_FILENO:
 	case STDIN_FILENO:
