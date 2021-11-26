@@ -100,7 +100,6 @@ void 			greet					(void);
  *
  ******************************************************************************/
 
-#if CLI_ENABLE
 int _write(int file, char *data, int len){
 	if(file != STDOUT_FILENO && file != STDERR_FILENO){
 		errno = EBADF;
@@ -126,7 +125,6 @@ __attribute__((weak)) int _isatty(int file){
 		return 0;
 	}
 }
-#endif /* CLI_ENABLE */
 
 /*******************************************************************************
  *
@@ -232,9 +230,9 @@ void cli_init(UART_HandleTypeDef *handle_uart)
     	CLI_commands[j].pFun = NULL;
     }
 
-    CLI_ADD_CMD("help", cli_help_help, cli_help);
-    CLI_ADD_CMD("cls", cli_clear_help, cli_clear);
-    CLI_ADD_CMD("reboot", cli_reboot_help, cli_reboot);
+    cli_add_command("help", cli_help_help, cli_help);
+    cli_add_command("cls", cli_clear_help, cli_clear);
+    cli_add_command("reboot", cli_reboot_help, cli_reboot);
 
 #ifndef CLI_PASSWORD
     cli_password_ok = true;

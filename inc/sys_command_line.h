@@ -30,11 +30,10 @@
 #define MAX_LINE_LEN 		80
 //#define CLI_PASSWORD		""					/* uncomment to set a password. "" correspond to empty password (juste press enter to display shell) */
 
-#if CLI_ENABLE
+#ifdef CLI_ENABLED
     #define CLI_INIT(...)       cli_init(__VA_ARGS__)
     #define CLI_RUN(...)        cli_run(__VA_ARGS__)
 	#define CLI_ADD_CMD(...)	cli_add_command(__VA_ARGS__)
-
 #else
     #define CLI_INIT(...)       ;
     #define CLI_RUN(...)        ;
