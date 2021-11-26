@@ -10,7 +10,7 @@
   */
 
 #include "main.h"
-#include "../shell/inc/sys_queue.h"
+#include "../inc/sys_queue.h"
 #include "stdbool.h"
 
 /**
