@@ -80,39 +80,41 @@ Where :
   uint8_t foo(int argc, char *argv[]);
   ```
 
-   The parameters in the line calling the command will be placed in `*argv[]` and the number of arguments will be placed in `argc`
-
-  Example:
-
-  If you add the following command: 
-
-  ```
-  CLI_ADD_CMD("my_command", "My first command", my_command);
-  ...
-  uint8_t my_command(int argc, char *argv[]){
-  ...
-  }
-  ```
-
-  and then you enter the following line in the shell:
-
-  ```
-  my_command arg1 arg2 arg3	
-  ```
-
-  you will have:
-
-  ```
-  argc = 4
-  argv[0] = "my_command"
-  argv[1] = "arg1"
-  argv[2] = "arg2"
-  argv[3] = "arg3"
-  ```
-
-  .
+  The parameters in the line calling the command will be placed in `*argv[]` and the number of arguments will be placed in `argc`.
 
   The function must then return `EXIT_SUCCESS` if it executed successfully or  `EXIT_FAILURE` if a problem happened. These two macros are defined in `stdlib.h`.
+
+###### Example:
+
+If you add the following command: 
+
+```
+CLI_ADD_CMD("my_command", "My first command", my_command);
+...
+uint8_t my_command(int argc, char *argv[]){
+...
+}
+```
+
+and then you enter the following line in the shell:
+
+```
+my_command arg1 arg2 arg3	
+```
+
+you will have the function `my_function` called with:
+
+```
+argc = 4
+argv[0] = "my_command"
+argv[1] = "arg1"
+argv[2] = "arg2"
+argv[3] = "arg3"
+```
+
+.
+
+
 
 ## 3. TODO
 
