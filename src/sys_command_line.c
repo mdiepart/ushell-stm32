@@ -389,7 +389,7 @@ static void cli_rx_handle(RX_BUFF_TYPE *rx_buff)
 				char *token = strtok(NULL, " \t");
 				while(token != NULL){
 					if(argc >= MAX_ARGC){
-						PRINTF_COLOR(E_FONT_RED, "Maximum number of arguments is %d. Ignoring the rest of the arguments.\r\n", MAX_ARGC-1);
+						PRINTF_COLOR(E_FONT_RED, "Maximum number of arguments is %d. Ignoring the rest of the arguments.", MAX_ARGC-1);NL1();
 						break;
 					}
 					argv[argc] = token;
@@ -403,22 +403,22 @@ static void cli_rx_handle(RX_BUFF_TYPE *rx_buff)
 					uint8_t result = CLI_commands[i].pFun(argc, argv);
 
 					if(result == EXIT_SUCCESS){
-						PRINTF_COLOR(E_FONT_GREEN, "(%s returned %d)\r\n", command, result);
+						PRINTF_COLOR(E_FONT_GREEN, "(%s returned %d)", command, result);NL1();
 					}else{
-						PRINTF_COLOR(E_FONT_RED, "(%s returned %d)\r\n", command, result);
+						PRINTF_COLOR(E_FONT_RED, "(%s returned %d)", command, result);NL1();
 					}
 					TERMINAL_SHOW_CURSOR();
 					break;
 				} else {
 					/* func. is void */
-					PRINTF_COLOR(E_FONT_RED, "Command %s exists but no function is associated to it.\r\n", command);
+					PRINTF_COLOR(E_FONT_RED, "Command %s exists but no function is associated to it.", command);NL1();
 				}
 			}
 		}
 
 		if(!cmd_match) {
 			/* no matching command */
-			printf("\r\nCommand \"%s\" unknown, try: help\r\n", Handle.buff);
+			printf("\r\nCommand \"%s\" unknown, try: help", Handle.buff);NL1();
 		}
 
 		Handle.len = 0;
@@ -499,7 +499,7 @@ uint8_t cli_help(int argc, char *argv[])
 	if(argc == 1){
 	    for(size_t i = 0; i < MAX_COMMAND_NB; i++) {
 	    	if(strcmp(CLI_commands[i].pCmd, "") != 0){
-		    	printf("[%s]\r\n", CLI_commands[i].pCmd);
+		    	printf("[%s]", CLI_commands[i].pCmd);NL1();
 		        if (CLI_commands[i].pHelp) {
 		            printf(CLI_commands[i].pHelp);NL2();
 		        }
@@ -509,7 +509,7 @@ uint8_t cli_help(int argc, char *argv[])
 	}else if(argc == 2){
 	    for(size_t i = 0; i < MAX_COMMAND_NB; i++) {
 	    	if(strcmp(CLI_commands[i].pCmd, argv[1]) == 0){
-		    	printf("[%s]\r\n", CLI_commands[i].pCmd);
+		    	printf("[%s]", CLI_commands[i].pCmd);NL1();
 	    		printf(CLI_commands[i].pHelp);NL1();
 	    		return EXIT_SUCCESS;
 	    	}
@@ -559,7 +559,7 @@ uint8_t cli_reset(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	printf("\r\n[END]: System Rebooting");
+	NL1();printf("[END]: System Rebooting");NL1();
 	HAL_NVIC_SystemReset();
 	return EXIT_SUCCESS;
 }
@@ -575,6 +575,8 @@ void cli_add_command(const char *command, const char *help, uint8_t (*exec)(int 
 		}
 	}
 	if(i == MAX_COMMAND_NB){
-		PRINTF_COLOR(E_FONT_RED, "Cannot add command %s, max number of command reached. The maximum number of command is set to %d.\r\n", command, MAX_COMMAND_NB);
+		PRINTF_COLOR(E_FONT_RED, "Cannot add command %s, max number of commands "
+				"reached. The maximum number of command is set to %d.",
+				command, MAX_COMMAND_NB); NL1();
 	}
 }

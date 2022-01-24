@@ -42,19 +42,19 @@
 
 #define ERR(fmt, ...)  do {                                             \
                             fprintf(stderr,								\
-								"\033[1;31m[ERROR] %s(%d): "fmt"\r\n\033[1;37m",  	\
+								"\033[1;31m[ERROR] %s(%d): "fmt"\n\033[1;37m",  	\
                                 __FUNCTION__, __LINE__, ##__VA_ARGS__); \
                         }while(0)
 
 #define LOG(fmt, ...)  do {                                             \
                             TERMINAL_FONT_CYAN();                       \
-                            printf("[Log]: "fmt"\r\n", ##__VA_ARGS__);  \
+                            printf("[Log]: "fmt"\n", ##__VA_ARGS__);  \
                             TERMINAL_FONT_DEFAULT();                    \
                         } while(0)
 
 #define DBG(fmt, ...)  do {                                             \
                             TERMINAL_FONT_YELLOW();                     \
-                            printf("[Debug] %s(%d): "fmt"\r\n",         \
+                            printf("[Debug] %s(%d): "fmt"\n",         \
                                 __FUNCTION__, __LINE__, ##__VA_ARGS__); \
                                 TERMINAL_FONT_DEFAULT();                \
                         } while(0)
@@ -63,15 +63,15 @@
                             TERMINAL_FONT_RED();                        \
                             TERMINAL_HIGHLIGHT();                       \
                             fprintf(stderr, 							\
-								"### DIE ### %s(%d): "fmt"\r\n",     	\
+								"### DIE ### %s(%d): "fmt"\n",     	\
                                 __FUNCTION__, __LINE__, ##__VA_ARGS__); \
                         } while(1) /* infinite loop */
 
-#define NL1()           do { printf("\r\n"); } while(0)
-#define NL2()           do { printf("\r\n\r\n"); } while(0)
-#define NL3()           do { printf("\r\n\r\n\r\n"); } while(0)
+#define NL1()           do { printf("\n"); } while(0)
+#define NL2()           do { printf("\n\n"); } while(0)
+#define NL3()           do { printf("\n\n\n"); } while(0)
 
-#define PRINT_CLI_NAME()	do { printf("\r\n"CLI_NAME"$ "); } while(0)
+#define PRINT_CLI_NAME()	do { printf("\n"CLI_NAME"$ "); } while(0)
 
 
 /**

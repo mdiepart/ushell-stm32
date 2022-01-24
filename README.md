@@ -114,8 +114,14 @@ argv[3] = "arg3"
 
 .
 
+### 3.4 Client configuration
+The line termination is a line feed (LF, "\n"), that means that you will need to enable a setting in your client software that adds an implicit carriage return (CR, "\r") at each line feed (LF, "\n") received.
+
+In Putty, the setting is located in the "Terminal" tab and is called "Implicit CR in every LF".
+
+![PuTTY_Implicit_CR](.\Doc\putty_implicit_CR.png)
 
 
-## 3. TODO
+## 4. TODO
 
 - Fix a few bugs here and there
