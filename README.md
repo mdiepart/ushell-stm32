@@ -129,6 +129,9 @@ Also, in order to avoid having to put the USART interrupt request at a higher pr
 
 TL;DR: Avoid printing text from interrupts. Keep text short and only for debug purposes.
 
+### Using `PRINTF_COLOR`
+`PRINTF_COLOR` is kept in the code for backward compatibility but should not be used anymore and have been deprecated. Prefer using statements like `printf(CLI_FONT_RED"My red number: %d."CLI_FONT_DEFAULT, myNumber);`
+
 ## 5. TODO
 
 - Fix a few bugs here and there

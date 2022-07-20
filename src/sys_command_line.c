@@ -422,7 +422,7 @@ static void cli_rx_handle(RX_BUFF_TYPE *rx_buff)
 				char *token = strtok(NULL, " \t");
 				while(token != NULL){
 					if(argc >= MAX_ARGC){
-						PRINTF_COLOR(E_FONT_RED, "Maximum number of arguments is %d. Ignoring the rest of the arguments.", MAX_ARGC-1);NL1();
+						printf(CLI_FONT_RED "Maximum number of arguments is %d. Ignoring the rest of the arguments."CLI_FONT_DEFAULT, MAX_ARGC-1);NL1();
 						break;
 					}
 					argv[argc] = token;
@@ -436,15 +436,15 @@ static void cli_rx_handle(RX_BUFF_TYPE *rx_buff)
 					uint8_t result = CLI_commands[i].pFun(argc, argv);
 
 					if(result == EXIT_SUCCESS){
-						PRINTF_COLOR(E_FONT_GREEN, "(%s returned %d)", command, result);NL1();
+						printf(CLI_FONT_GREEN "(%s returned %d)" CLI_FONT_DEFAULT, command, result);NL1();
 					}else{
-						PRINTF_COLOR(E_FONT_RED, "(%s returned %d)", command, result);NL1();
+						printf(CLI_FONT_RED "(%s returned %d)" CLI_FONT_DEFAULT, command, result);NL1();
 					}
 					TERMINAL_SHOW_CURSOR();
 					break;
 				} else {
 					/* func. is void */
-					PRINTF_COLOR(E_FONT_RED, "Command %s exists but no function is associated to it.", command);NL1();
+					printf(CLI_FONT_RED "Command %s exists but no function is associated to it.", command);NL1();
 				}
 			}
 		}
@@ -462,7 +462,7 @@ static void cli_rx_handle(RX_BUFF_TYPE *rx_buff)
 
     if(Handle.len >= MAX_LINE_LEN) {
         /* full, so restart the count */
-    	PRINTF_COLOR(E_FONT_RED, "\r\nMax command length is %d.\r\n", MAX_LINE_LEN-1);
+    	printf(CLI_FONT_RED "\r\nMax command length is %d.\r\n" CLI_FONT_DEFAULT, MAX_LINE_LEN-1);
     	PRINT_CLI_NAME();
         Handle.len = 0;
     }
@@ -608,8 +608,8 @@ void cli_add_command(const char *command, const char *help, uint8_t (*exec)(int 
 		}
 	}
 	if(i == MAX_COMMAND_NB){
-		PRINTF_COLOR(E_FONT_RED, "Cannot add command %s, max number of commands "
-				"reached. The maximum number of command is set to %d.",
+		printf(CLI_FONT_RED "Cannot add command %s, max number of commands "
+				"reached. The maximum number of command is set to %d." CLI_FONT_DEFAULT,
 				command, MAX_COMMAND_NB); NL1();
 	}
 }

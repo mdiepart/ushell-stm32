@@ -31,7 +31,7 @@ enum {
     E_FONT_WHITE,
 };
 
-#define PRINTF_COLOR(c, ...)    do {                            \
+#define PRINTF_COLOR(c, ...) _Pragma ("GCC warning \"'PRINTF_COLOR' macro is deprecated\"")   do {                            \
 									switch (c) {                \
 										case E_FONT_BLACK:      \
 										TERMINAL_FONT_BLACK();  \
@@ -106,6 +106,18 @@ enum {
 */
 
 /* font color */
+
+#define CLI_FONT_BLACK		"\033[1;30m"
+#define CLI_FONT_L_RED		"\033[0;31m"    /* light red */
+#define CLI_FONT_RED		"\033[1;31m"    /* red */
+#define CLI_FONT_GREEN		"\033[1;32m"
+#define CLI_FONT_YELLOW		"\033[1;33m"
+#define CLI_FONT_BLUE		"\033[1;34m"
+#define CLI_FONT_PURPLE		"\033[1;35m"
+#define CLI_FONT_CYAN		"\033[1;36m"
+#define CLI_FONT_WHITE		"\033[1;37m"
+#define CLI_FONT_DEFAULT	CLI_FONT_WHITE
+
 #define TERMINAL_FONT_BLACK()       printf("\033[1;30m")
 #define TERMINAL_FONT_L_RED()       printf("\033[0;31m")    /* light red */
 #define TERMINAL_FONT_RED()         printf("\033[1;31m")    /* red */
@@ -115,9 +127,20 @@ enum {
 #define TERMINAL_FONT_PURPLE()      printf("\033[1;35m")
 #define TERMINAL_FONT_CYAN()        printf("\033[1;36m")
 #define TERMINAL_FONT_WHITE()       printf("\033[1;37m")
-#define TERMINAL_FONT_DEFAULT()		TERMINAL_FONT_WHITE()
+#define TERMINAL_FONT_DEFAULT()	    TERMINAL_FONT_WHITE()
 
 /* background color */
+#define CLI_BACK_BLACK		"\033[1;40m"
+#define CLI_BACK_L_RED		"\033[0;41m"    /* light red */
+#define CLI_BACK_RED		"\033[1;41m"    /* red */
+#define CLI_BACK_GREEN		"\033[1;42m"
+#define CLI_BACK_YELLOW		"\033[1;43m"
+#define CLI_BACK_BLUE		"\033[1;44m"
+#define CLI_BACK_PURPLE		"\033[1;45m"
+#define CLI_BACK_CYAN		"\033[1;46m"
+#define CLI_BACK_WHITE		"\033[1;47m"
+#define CLI_BACK_DEFAULT	CLI_BACK_BLACK
+
 #define TERMINAL_BACK_BLACK()       printf("\033[1;40m")
 #define TERMINAL_BACK_L_RED()       printf("\033[0;41m")    /* light red */
 #define TERMINAL_BACK_RED()         printf("\033[1;41m")    /* red */
