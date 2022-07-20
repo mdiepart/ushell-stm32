@@ -74,6 +74,7 @@ const char 				cli_help_help[] 			= "show commands";
 const char 				cli_clear_help[] 			= "clear the screen";
 const char 				cli_reset_help[] 			= "reboot MCU";
 bool 					cli_password_ok 			= false;
+volatile bool			cli_tx_isr_flag				= false; /*< This flag is used internally so that _write will not write text in the console if the previous call is not over yet */
 
 /*******************************************************************************
  *
@@ -105,7 +106,33 @@ int _write(int file, char *data, int len){
 		errno = EBADF;
 		return -1;
 	}
-	HAL_StatusTypeDef status = HAL_UART_Transmit(huart_shell, (uint8_t *)data, len, 100);
+
+	HAL_StatusTypeDef status = HAL_OK;
+
+	if (!(SCB->ICSR & SCB_ICSR_VECTACTIVE_Msk) ) {
+		cli_tx_isr_flag = true;
+		/* Disable interrupts to prevent UART from throwing an RX interrupt while the peripheral is locked as
+		 * this would prevent the RX interrupt from restarting HAL_UART_Receive_IT  */
+		HAL_NVIC_DisableIRQ(USART1_IRQn);
+
+		/* Transmits with interrupts. This must be done this way so that we can re-activate USART interrupts
+		 * before the transfer terminates so that we can continue reading from the terminal*/
+		status = HAL_UART_Transmit_IT(huart_shell, (uint8_t *)data, len);
+
+		HAL_NVIC_EnableIRQ(USART1_IRQn);
+
+		/* Wait for the transfer to terminate*/
+		while(cli_tx_isr_flag == true){
+			/* flag will be set to false in HAL_UART_TxCpltCallback*/
+		}
+	}else{
+		/* We are called from an interrupt, using Transmit_IT would not work */
+		HAL_NVIC_DisableIRQ(USART1_IRQn);
+		status = HAL_UART_Transmit(huart_shell, (uint8_t *)data, len, 1000);
+		HAL_NVIC_EnableIRQ(USART1_IRQn);
+	}
+
+
 
 	if(status == HAL_OK){
 		return len;
@@ -250,6 +277,12 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef * huart){
 	HAL_UART_Receive_IT(huart, &cBuffer, 1);
 }
 
+/*
+ * Callback function for UART IRQ when it is done transmitting data
+ */
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef * huart){
+	cli_tx_isr_flag = false;
+}
 
 /**
   * @brief  handle commands from the terminal

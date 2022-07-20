@@ -121,7 +121,14 @@ In Putty, the setting is located in the "Terminal" tab and is called "Implicit C
 
 ![PuTTY_Implicit_CR](.\Doc\putty_implicit_CR.png)
 
+## 4. Special consideration when using the shell
+### Using print statements in interrupt requests
+When printing using provided macros or `printf` function, the standard `stdio.h` library is used. This implies that text can be buffered and won't be printed to the shell unless the buffer is full or a newline is printed. This makes it so that some print statements will flush the buffer while some won't. If the print statement does flush the buffer, it  will take significantly more time (0.1ms per character written). Thus, printing from within interrupt requests is not recommended.
 
-## 4. TODO
+Also, in order to avoid having to put the USART interrupt request at a higher pre-emptive priority than the rest of the ISRs, flushing the buffer from within an interrupt will not use an interrupt to detect when the transfer is complete. This implies that the terminal may not be able to read characters properly if a lot of text is printed from within interrupts even if the USART interrupt is the highest priority ISR.
+
+TL;DR: Avoid printing text from interrupts. Keep text short and only for debug purposes.
+
+## 5. TODO
 
 - Fix a few bugs here and there
