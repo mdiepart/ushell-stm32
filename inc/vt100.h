@@ -116,6 +116,7 @@ enum {
 #define CLI_FONT_PURPLE		"\033[1;35m"
 #define CLI_FONT_CYAN		"\033[1;36m"
 #define CLI_FONT_WHITE		"\033[1;37m"
+#define CLI_FONT_GREY		"\033[1;90m"
 #define CLI_FONT_DEFAULT	CLI_FONT_WHITE
 
 #define TERMINAL_FONT_BLACK()       printf("\033[1;30m")
