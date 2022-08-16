@@ -15,77 +15,22 @@
 
 #include <stdint.h>
 
-uint8_t queue_init(uint16_t *Front, uint16_t *Rear, uint8_t *PBase, uint16_t Len);
-uint8_t queue_full(uint16_t *Front, uint16_t *Rear, uint8_t *PBase, uint16_t Len);
-uint8_t queue_empty(uint16_t *Front, uint16_t *Rear, uint8_t *PBase, uint16_t Len);
-uint8_t queue_in(uint16_t *Front, uint16_t *Rear, uint8_t *PBase, uint16_t Len, uint8_t *PData);
-uint8_t queue_out(uint16_t *Front, uint16_t *Rear, uint8_t *PBase, uint16_t Len, uint8_t *PData);
+#ifndef SHELL_QUEUE_LENGTH
+	#define SHELL_QUEUE_LENGTH 32
+#endif
 
-//queue init.
-#define QUEUE_INIT(q)       queue_init((uint16_t *) &(q.Front),(uint16_t *) &(q.Rear),(uint8_t *) &(q.PBase[0]),(uint16_t) (sizeof(q.PBase)))
-//queue full?
-#define QUEUE_FULL(q)       queue_full((uint16_t *) &(q.Front),(uint16_t *) &(q.Rear),(uint8_t *) &(q.PBase[0]),(uint16_t) (sizeof(q.PBase)))
-//queue empty?
-#define QUEUE_EMPTY(q)      queue_empty((uint16_t *) &(q.Front),(uint16_t *) &(q.Rear),(uint8_t *) &(q.PBase[0]),(uint16_t) (sizeof(q.PBase)))
-//put pdata in queue
-#define QUEUE_PUT(q, pdata) queue_in((uint16_t *) &(q.Front),(uint16_t *) &(q.Rear),(uint8_t *) &(q.PBase[0]),(uint16_t) (sizeof(q.PBase)),(uint8_t *) &pdata)
-//get byte from queue
-#define QUEUE_GET(q, pdata) queue_out((uint16_t *) &(q.Front),(uint16_t *) &(q.Rear),(uint8_t *) &(q.PBase[0]),(uint16_t) (sizeof(q.PBase)),(uint8_t *) &pdata)
+typedef struct queue {
+	size_t		Front;
+	size_t 		Rear;
+	uint8_t		PBase[SHELL_QUEUE_LENGTH];
 
-//8 Bytes Queue Struct
-typedef struct queue8 {
-    uint16_t    Front;
-    uint16_t    Rear;
-    uint8_t     PBase[8 + 1];
-} QUEUE8_S;
+} shell_queue_s;
 
-//16 Bytes Queue Struct
-typedef struct queue16 {
-    uint16_t    Front;
-    uint16_t    Rear;
-    uint8_t     PBase[16 + 1];
-} QUEUE16_S;
-
-//32 Bytes Queue Struct
-typedef struct queue32 {
-    uint16_t    Front;
-    uint16_t    Rear;
-    uint8_t     PBase[32 + 1];
-} QUEUE32_S;
-
-//64 Bytes Queue Struct
-typedef struct queue64 {
-    uint16_t    Front;
-    uint16_t    Rear;
-    uint8_t     PBase[64 + 1];
-} QUEUE64_S;
-
-//128 Bytes Queue Struct
-typedef struct queue128 {
-    uint16_t    Front;
-    uint16_t    Rear;
-    uint8_t     PBase[128 + 1];
-} QUEUE128_S;
-
-//256 Bytes Queue Struct
-typedef struct queue256 {
-    uint16_t    Front;
-    uint16_t    Rear;
-    uint8_t     PBase[256 + 1];
-} QUEUE256_S;
-
-typedef struct queue1024 {
-    uint16_t    Front;
-    uint16_t    Rear;
-    uint8_t     PBase[1024 + 1];
-} QUEUE1024_S;
-
-typedef struct queue2048 {
-    uint16_t    Front;
-    uint16_t    Rear;
-    uint8_t     PBase[2048 + 1];
-} QUEUE2048_S;
-
+uint8_t shell_queue_init(shell_queue_s *queue);
+uint8_t shell_queue_full(shell_queue_s *queue);
+uint8_t shell_queue_empty(shell_queue_s *queue);
+uint8_t shell_queue_in(shell_queue_s *queue, uint8_t *PData);
+uint8_t shell_queue_out(shell_queue_s *queue, uint8_t *PData);
 
 #endif /* __SYS_QUEUE_H */
 

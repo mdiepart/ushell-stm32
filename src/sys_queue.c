@@ -14,31 +14,28 @@
 #include "stdbool.h"
 
 /**
- * @brief  queue_init
- * @param  Front , Rear , PBase , Len
+ * @brief  shell_queue_init inits the contents of the queue to zeros
+ * @param  queue
  * @retval True
  */
-uint8_t queue_init(uint16_t *Front, uint16_t *Rear, uint8_t *PBase, uint16_t Len)
+uint8_t shell_queue_init(shell_queue_s *queue)
 {
-    uint16_t index;
+	queue->Front = queue->Rear = 0;
 
-    for(index = 0; index < Len; index++) {
-        PBase[index] = 0;
-    }
+    memset(queue->PBase, 0, SHELL_QUEUE_LENGTH);
 
-    *Front = *Rear = 0;
     return true;
 }
 
 
 /**
- * @brief  queue_full
- * @param  Front , Rear , PBase , Len
- * @retval Result of Queue Operation as Enum
+ * @brief  shell_queue_full checks if the queue is full
+ * @param  queue
+ * @retval Result of Queue Operation as bool
  */
-uint8_t queue_full(uint16_t *Front, uint16_t *Rear, uint8_t *PBase, uint16_t Len)
+uint8_t shell_queue_full(shell_queue_s *queue)
 {
-    if((((*Rear) + 1) % Len) == *Front) {
+    if((((queue->Rear) + 1) % SHELL_QUEUE_LENGTH) == queue->Front) {
         return true;
     } else {
         return false;
@@ -46,13 +43,13 @@ uint8_t queue_full(uint16_t *Front, uint16_t *Rear, uint8_t *PBase, uint16_t Len
 }
 
 /**
- * @brief  queue_empty
- * @param  Front , Rear , PBase , Len
- * @retval Result of Queue Operation as Enum
+ * @brief  shell_queue_empty checks if the queue is empty
+ * @param  queue
+ * @retval Result of Queue Operation as bool
  */
-uint8_t queue_empty(uint16_t *Front, uint16_t *Rear, uint8_t *PBase, uint16_t Len)
+uint8_t shell_queue_empty(shell_queue_s *queue)
 {
-    if(*Front == *Rear) {
+    if(queue->Front == queue->Rear) {
         return true;
     } else {
         return false;
@@ -61,42 +58,39 @@ uint8_t queue_empty(uint16_t *Front, uint16_t *Rear, uint8_t *PBase, uint16_t Le
 
 
 /**
- * @brief  queue_in
- * @param  Front , Rear , PBase , Len
- * @retval Result of Queue Operation as Enum
+ * @brief  shell_queue_in inserts a byte in the queue
+ * @param  queue, PData
+ * @retval Result of Queue Operation as bool
  */
-uint8_t queue_in(uint16_t *Front, uint16_t *Rear, uint8_t *PBase, uint16_t Len, uint8_t *PData)
+uint8_t shell_queue_in(shell_queue_s *queue, uint8_t *PData)
 {
 
-    if(queue_full(Front, Rear, PBase, Len)) {
+    if(shell_queue_full(queue)) {
         return false;
     }
 
-    PBase[*Rear] = *PData;
-    *Rear = ((*Rear) + 1) % Len;
+    queue->PBase[queue->Rear] = *PData;
+    queue->Rear = ((queue->Rear) + 1) % SHELL_QUEUE_LENGTH;
 
     return true;
 }
 
 
 /**
- * @brief  queue_out
- * @param  Front , Rear , PBase , Len
- * @retval Result of Queue Operation as Enum
+ * @brief  shell_queue_out
+ * @param  queue, PData
+ * @retval Result of Queue Operation as bool
  */
 
-uint8_t queue_out(uint16_t *Front, uint16_t *Rear, uint8_t *PBase, uint16_t Len, uint8_t *PData)
+uint8_t shell_queue_out(shell_queue_s *queue, uint8_t *PData)
 {
-
-    if(queue_empty(Front, Rear, PBase, Len)) {
+    if(shell_queue_empty(queue)) {
         return false;
     }
 
-    *PData = PBase[*Front];
-    *Front = ((*Front) + 1) % Len;
-
+    *PData = queue->PBase[queue->Front];
+    queue->Front = ((queue->Front) + 1) % SHELL_QUEUE_LENGTH;
 
     return true;
 }
-
 

@@ -21,7 +21,7 @@
 #include <stdlib.h>
 #include "../inc/sys_command_line.h"
 
-#define RX_BUFF_TYPE        QUEUE64_S
+//#define RX_BUFF_TYPE        QUEUE64_S
 
 /*******************************************************************************
  *
@@ -63,9 +63,8 @@ typedef struct {
  *
  ******************************************************************************/
 
-RX_BUFF_TYPE        	cli_rx_buff;
 unsigned char 			cBuffer;
-RX_BUFF_TYPE 			cli_rx_buff; 				/* 64 bytes FIFO, saving commands from the terminal */
+shell_queue_s 			cli_rx_buff; 				/* 64 bytes FIFO, saving commands from the terminal */
 UART_HandleTypeDef 		*huart_shell;
 COMMAND_S				CLI_commands[MAX_COMMAND_NB];
 static HISTORY_S 		history;
@@ -85,7 +84,7 @@ volatile bool			cli_tx_isr_flag				= false; /*< This flag is used internally so 
 static void 	cli_history_add			(char* buff);
 static uint8_t 	cli_history_show		(uint8_t mode, char** p_history);
 void 			HAL_UART_RxCpltCallback	(UART_HandleTypeDef * huart);
-static void 	cli_rx_handle			(RX_BUFF_TYPE *rx_buff);
+static void 	cli_rx_handle			(shell_queue_s *rx_buff);
 static void 	cli_tx_handle			(void);
 uint8_t 		cli_help				(int argc, char *argv[]);
 uint8_t 		cli_clear				(int argc, char *argv[]);
@@ -245,8 +244,7 @@ static uint8_t cli_history_show(uint8_t mode, char** p_history)
 void cli_init(UART_HandleTypeDef *handle_uart)
 {
 	huart_shell = handle_uart;
-
-    memset((uint8_t *)&cli_rx_buff, 0, sizeof(RX_BUFF_TYPE));
+	shell_queue_init(&cli_rx_buff);
     memset((uint8_t *)&history, 0, sizeof(history));
 
     HAL_UART_MspInit(huart_shell);
@@ -273,7 +271,7 @@ void cli_init(UART_HandleTypeDef *handle_uart)
  * Callback function for UART IRQ when it is done receivign a char
  */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef * huart){
-	QUEUE_PUT(cli_rx_buff, cBuffer);
+	shell_queue_in(&cli_rx_buff, &cBuffer);
 	HAL_UART_Receive_IT(huart, &cBuffer, 1);
 }
 
@@ -289,7 +287,7 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef * huart){
   * @param  commands
   * @retval null
   */
-static void cli_rx_handle(RX_BUFF_TYPE *rx_buff)
+static void cli_rx_handle(shell_queue_s *rx_buff)
 {
     static HANDLE_TYPE_S Handle = {.len = 0, .buff = {0}};
     uint8_t i = Handle.len;
@@ -303,7 +301,7 @@ static void cli_rx_handle(RX_BUFF_TYPE *rx_buff)
     bool newChar = true;
     while(newChar) {
         if(Handle.len < MAX_LINE_LEN) {  /* check the buffer */
-        	newChar = QUEUE_GET((*rx_buff), Handle.buff[Handle.len]);
+        	newChar = shell_queue_out(rx_buff, Handle.buff+Handle.len);
 
             /* new char coming from the terminal, copy it to Handle.buff */
             if(newChar) {
