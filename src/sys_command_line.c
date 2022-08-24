@@ -21,8 +21,8 @@
 #include <stdlib.h>
 #include "../inc/sys_command_line.h"
 
-//#define RX_BUFF_TYPE        QUEUE64_S
-
+#define STRING(s) #s
+#define XSTRING(s) STRING(s)
 /*******************************************************************************
  *
  * 	Typedefs
@@ -259,20 +259,20 @@ void cli_init(UART_HandleTypeDef *handle_uart)
     	CLI_commands[j].pFun = NULL;
     }
 
-    cli_add_command("help", cli_help_help, cli_help);
-    cli_add_command("cls", cli_clear_help, cli_clear);
-    cli_add_command("reset", cli_reset_help, cli_reset);
-
 #ifndef CLI_PASSWORD
     cli_password_ok = true;
     greet();
 #endif
 
+    CLI_ADD_CMD("help", cli_help_help, cli_help);
+    CLI_ADD_CMD("cls", cli_clear_help, cli_clear);
+    CLI_ADD_CMD("reset", cli_reset_help, cli_reset);
+
 
 }
 
 /*
- * Callback function for UART IRQ when it is done receivign a char
+ * Callback function for UART IRQ when it is done receiving a char
  */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef * huart){
 	shell_queue_in(&cli_rx_buff, &cBuffer);
@@ -392,7 +392,7 @@ static void cli_rx_handle(shell_queue_s *rx_buff)
     if(exec_req && !cli_password_ok){
 #ifdef CLI_PASSWORD
     	Handle.buff[Handle.len-1] = '\0';
-    	if(strcmp((char *)Handle.buff, CLI_PASSWORD) == 0){
+    	if(strcmp((char *)Handle.buff, XSTRING(CLI_PASSWORD)) == 0){
     		cli_password_ok = true;
     		greet();
     	}
@@ -610,7 +610,7 @@ void cli_add_command(const char *command, const char *help, uint8_t (*exec)(int 
 		}
 	}
 	if(i == MAX_COMMAND_NB){
-		printf(CLI_FONT_RED "Cannot add command %s, max number of commands "
+		ERR("Cannot add command %s, max number of commands "
 				"reached. The maximum number of command is set to %d." CLI_FONT_DEFAULT,
 				command, MAX_COMMAND_NB); NL1();
 	}

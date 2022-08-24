@@ -24,11 +24,9 @@
  */
 #define CLI_ENABLE          true            	/* command line enable/disable */
 #define HISTORY_MAX         10                  /* maximum number of history command */
-#define CLI_NAME			"vitapatch_bioz"	/* Device name shown in the shell */
 #define MAX_COMMAND_NB		32
 #define MAX_ARGC			8
 #define MAX_LINE_LEN 		80
-//#define CLI_PASSWORD		""					/* un-comment to set a password. "" correspond to empty password (just press enter to display shell) */
 
 #ifndef CLI_DISABLE
     #define CLI_INIT(...)       cli_init(__VA_ARGS__)
@@ -74,7 +72,11 @@
 #define NL2()           do { printf("\n\n"); } while(0)
 #define NL3()           do { printf("\n\n\n"); } while(0)
 
-#define PRINT_CLI_NAME()	do { printf(CLI_FONT_DEFAULT"\n"CLI_NAME"$ "); } while(0)
+#ifdef CLI_NAME
+#define PRINT_CLI_NAME()	do { printf(CLI_FONT_DEFAULT"\n"XSTRING(CLI_NAME)"$ "); } while(0)
+#else
+#define PRINT_CLI_NAME()	do { printf(CLI_FONT_DEFAULT"\n#$ "); } while(0)
+#endif
 
 
 /**

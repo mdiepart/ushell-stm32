@@ -60,7 +60,38 @@ CLI_INIT(&huart1);
 
 * And finally in order to process the commands add the line `CLI_RUN();` inside of the main loop of your program.
 
-### 3.3 Adding new commands
+### 3.3 Customizing the shell
+
+#### Password
+The shell can be password protected. When using a password, the shell won't display any text and no command will be taken until the password is correctly entered (you must press 'enter' once you typed the password).
+
+To define a password, add a line like the following to your `main.h` file:
+```c
+#define CLI_PASSWORD myPassword
+```
+If there is no such line then no password is defined and the shell starts up immediately.
+
+#### Shell Name
+The shell can have a name which is displayed at the beginning of each line like so:
+```
+shell_name$ help
+[help]
+show commands
+
+[cls]
+clear the screen
+
+[...]
+
+shell_name$
+```
+In order to define a name, add a line like the following to your `main.h` file:
+```c
+#define CLI_NAME shell_name
+```
+If there is no such line then no name is defined and the name in the previous example will be replaced by `#`.
+
+### 3.4 Adding new commands
 
 In order to add a new command to the shell, use the function 
 
@@ -114,7 +145,7 @@ argv[3] = "arg3"
 
 .
 
-### 3.4 Client configuration
+### 3.5 Client configuration
 The line termination is a line feed (LF, "\n"), that means that you will need to enable a setting in your client software that adds an implicit carriage return (CR, "\r") at each line feed (LF, "\n") received.
 
 In Putty, the setting is located in the "Terminal" tab and is called "Implicit CR in every LF".
