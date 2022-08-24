@@ -106,6 +106,10 @@ int _write(int file, char *data, int len){
 		return -1;
 	}
 
+	if(cli_password_ok == false){
+		return len;
+	}
+
 	HAL_StatusTypeDef status = HAL_OK;
 
 	if (!(SCB->ICSR & SCB_ICSR_VECTACTIVE_Msk) ) {
