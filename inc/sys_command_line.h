@@ -2,10 +2,11 @@
   ******************************************************************************
   * @file:      sys_command_line.h
   * @author:    Cat
+  * @author: 	Morgan Diepart
   * @version:   V1.0
-  * @date:      2018-1-18
+  * @date:      2022-08-24
   * @brief:     command line
-  * @attention:
+  *
   ******************************************************************************
   */
 
@@ -46,12 +47,14 @@
                                 __FUNCTION__, __LINE__, ##__VA_ARGS__); \
                         }while(0)
 
-#define LOG(fmt, ...)  do {                                             \
+#define LOG(LOG_CAT, fmt, ...)  										\
+						if((1<<LOG_CAT)&cli_log_stat) {                     \
                             printf(CLI_FONT_CYAN						\
-								"[Log]: "fmt""							\
+								"[%s]: "fmt""							\
 								CLI_FONT_DEFAULT"\n",					\
+								cli_logs_names[LOG_CAT],					\
 								##__VA_ARGS__);  						\
-                        } while(0)
+                        }
 
 #define DBG(fmt, ...)  do {                                             \
                             printf(CLI_FONT_YELLOW						\
@@ -77,6 +80,21 @@
 #else
 #define PRINT_CLI_NAME()	do { printf(CLI_FONT_DEFAULT"\n#$ "); } while(0)
 #endif
+enum cli_log_categories {
+	CLI_LOG_SHELL = 0,
+
+#ifdef CLI_ADDITIONAL_LOG_CATEGORIES
+#define X(name, b) CLI_LOG_##name,
+CLI_ADDITIONAL_LOG_CATEGORIES
+#undef X
+#endif
+
+	CLI_LAST_LOG_CATEGORY,
+};
+
+extern char *cli_logs_names[];
+
+extern uint32_t cli_log_stat;
 
 
 /**
@@ -94,7 +112,6 @@ void 		cli_init(UART_HandleTypeDef *handle_uart);
 void 		cli_run(void);
 
 void 		cli_add_command(const char *command, const char *help, uint8_t (*exec)(int argc, char *argv[]));
-
 
 #endif /* __SYS_COMMAND_LINE_H */
 

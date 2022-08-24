@@ -90,7 +90,27 @@ In order to define a name, add a line like the following to your `main.h` file:
 #define CLI_NAME shell_name
 ```
 If there is no such line then no name is defined and the name in the previous example will be replaced by `#`.
+py
 
+#### LOG categories
+Additional log categories can be defined to be used with the shell.
+For that you need to add a line like the following:
+```c
+#define CLI_ADDITIONAL_LOG_CATEGORIES \
+	X(CAT1, true) \
+	X(CAT2, false) \
+	X(CAT3, true) \
+```
+
+This define will automatically create the log categories `CLI_LOG_CAT1`, `CLI_LOG_CAT2`, `CLI_LOG_CAT3`. The categories CAT1 and CAT3 will be enabled by default (the logs will be displayed) while CAT2 will not be enabled at startup (logs won't be displayed).
+ When calling the log function, use it like this:
+```c
+LOG(CLI_LOG_CAT2, "My log line");
+//Will print
+[CAT2]: My log line\n
+```
+.
+The various categories can be enabled and disabled at run time using the command `log`.
 ### 3.4 Adding new commands
 
 In order to add a new command to the shell, use the function 

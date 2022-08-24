@@ -2,13 +2,10 @@
   ******************************************************************************
   * @file:      sys_command_line.c
   * @author:    Cat
+  * @author: 	Morgan Diepart
   * @version:   V1.0
-  * @date:      2018-1-18
+  * @date:      2022-08-24
   * @brief:     command line
-  * @attention:
-  * 
-  *             V0.5: [add] colorful log print API
-  *             V0.6: [add] history command support
   * 
   ******************************************************************************
   */
@@ -68,10 +65,29 @@ shell_queue_s 			cli_rx_buff; 				/* 64 bytes FIFO, saving commands from the ter
 UART_HandleTypeDef 		*huart_shell;
 COMMAND_S				CLI_commands[MAX_COMMAND_NB];
 static HISTORY_S 		history;
+char *cli_logs_names[] = {"SHELL",
+#ifdef CLI_ADDITIONAL_LOG_CATEGORIES
+#define X(name, b) #name,
+		CLI_ADDITIONAL_LOG_CATEGORIES
+#undef X
+#endif
+};
+
+uint32_t cli_log_stat = 0
+#ifdef CLI_ADDITIONAL_LOG_CATEGORIES
+#define X(name, b) | (b<<CLI_LOG_##name)
+		CLI_ADDITIONAL_LOG_CATEGORIES
+#undef X
+#endif
+;
 
 const char 				cli_help_help[] 			= "show commands";
 const char 				cli_clear_help[] 			= "clear the screen";
 const char 				cli_reset_help[] 			= "reboot MCU";
+const char				cli_log_help[]				= "Controls which logs are displayed."
+													  "\n\t\"log show\" to show which logs are enabled"
+													  "\n\t\"log on/off all\" to enable/disable all logs"
+													  "\n\t\"log on/off [CAT1 CAT2 CAT...]\" to enable/disable the logs for categories [CAT1 CAT2 CAT...]";
 bool 					cli_password_ok 			= false;
 volatile bool			cli_tx_isr_flag				= false; /*< This flag is used internally so that _write will not write text in the console if the previous call is not over yet */
 
@@ -89,9 +105,11 @@ static void 	cli_tx_handle			(void);
 uint8_t 		cli_help				(int argc, char *argv[]);
 uint8_t 		cli_clear				(int argc, char *argv[]);
 uint8_t 		cli_reset				(int argc, char *argv[]);
+uint8_t 		cli_log					(int argc, char *argv[]);
 void 			cli_add_command			(const char *command, const char *help, uint8_t (*exec)(int argc, char *argv[]));
 void 			greet					(void);
-
+void 			cli_disable_log_entry	(char *str);
+void 			cli_enable_log_entry	(char *str);
 
 /*******************************************************************************
  *
@@ -267,7 +285,13 @@ void cli_init(UART_HandleTypeDef *handle_uart)
     CLI_ADD_CMD("help", cli_help_help, cli_help);
     CLI_ADD_CMD("cls", cli_clear_help, cli_clear);
     CLI_ADD_CMD("reset", cli_reset_help, cli_reset);
+    CLI_ADD_CMD("log", cli_log_help, cli_log);
 
+    if(CLI_LAST_LOG_CATEGORY > 32){
+    	ERR("Too many log categories defined. The max number of log categories that can be user defined is 31.");
+    }
+
+    LOG(CLI_LOG_SHELL, "Command line successfully initialized.");
 
 }
 
@@ -613,5 +637,78 @@ void cli_add_command(const char *command, const char *help, uint8_t (*exec)(int 
 		ERR("Cannot add command %s, max number of commands "
 				"reached. The maximum number of command is set to %d." CLI_FONT_DEFAULT,
 				command, MAX_COMMAND_NB); NL1();
+	}
+	LOG(CLI_LOG_SHELL, "Command %s added to shell.", command);
+}
+
+uint8_t cli_log(int argc, char *argv[]){
+	if(argc < 2){
+		printf("Command %s takes at least one argument. Use \"help %s\" for usage.\n", argv[0], argv[0]);
+		return EXIT_FAILURE;
+	}
+
+	if(strcmp(argv[1], "on") == 0){
+		if(argc < 3){
+			printf("Command %s on takes at least 3 arguments.\n", argv[0]);
+			return EXIT_FAILURE;
+		}
+		if(strcmp(argv[2], "all") == 0){
+			cli_log_stat = 0xFFFFFFFF;
+			printf("All logs enabled.\n");
+			return EXIT_SUCCESS;
+		}else{
+			for(int i = 2; i < argc; i++){
+				cli_enable_log_entry(argv[i]);
+			}
+			return EXIT_SUCCESS;
+		}
+
+	}else if(strcmp(argv[1], "off") == 0){
+		printf("Turning off all logs\n");
+		if(argc < 3){
+			printf("Command %s on takes at least 3 arguments.\n", argv[0]);
+			return EXIT_FAILURE;
+		}
+		if(strcmp(argv[2], "all") == 0){
+			cli_log_stat = 0;
+			printf("All logs disabled.\n");
+			return EXIT_SUCCESS;
+		}else{
+			for(int i = 2; i < argc; i++){
+				cli_disable_log_entry(argv[i]);
+			}
+			return EXIT_SUCCESS;
+		}
+
+	}else if(strcmp(argv[1], "show") == 0){
+		for(unsigned int i = 0; i < CLI_LAST_LOG_CATEGORY; i++){
+			printf("%16s:\t", cli_logs_names[i]);
+			if(cli_log_stat&(1<<i)){
+				printf(CLI_FONT_GREEN"Enabled"CLI_FONT_DEFAULT"\n");
+			}else{
+				printf(CLI_FONT_RED"Disabled"CLI_FONT_DEFAULT"\n");
+			}
+		}
+		return EXIT_SUCCESS;
+	}
+
+	return EXIT_FAILURE;
+}
+
+void cli_disable_log_entry(char *str){
+	for(unsigned int i = 0; i < CLI_LAST_LOG_CATEGORY; i++){
+		if(strcmp(str, cli_logs_names[i]) == 0){
+			printf("LOG disabled for category %s.\n", str);
+			cli_log_stat &= ~(1<<i);
+		}
+	}
+}
+
+void cli_enable_log_entry(char *str){
+	for(unsigned int i = 0; i < CLI_LAST_LOG_CATEGORY; i++){
+		if(strcmp(str, cli_logs_names[i]) == 0){
+			printf("LOG enabled for category %s.\n", str);
+			cli_log_stat |= (1<<i);
+		}
 	}
 }
