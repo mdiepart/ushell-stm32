@@ -288,10 +288,10 @@ void cli_init(UART_HandleTypeDef *handle_uart)
     CLI_ADD_CMD("log", cli_log_help, cli_log);
 
     if(CLI_LAST_LOG_CATEGORY > 32){
-    	ERR("Too many log categories defined. The max number of log categories that can be user defined is 31.");
+    	ERR("Too many log categories defined. The max number of log categories that can be user defined is 31.\n");
     }
 
-    LOG(CLI_LOG_SHELL, "Command line successfully initialized.");
+    LOG(CLI_LOG_SHELL, "Command line successfully initialized.\n");
 
 }
 
@@ -635,10 +635,10 @@ void cli_add_command(const char *command, const char *help, uint8_t (*exec)(int 
 	}
 	if(i == MAX_COMMAND_NB){
 		ERR("Cannot add command %s, max number of commands "
-				"reached. The maximum number of command is set to %d." CLI_FONT_DEFAULT,
+				"reached. The maximum number of command is set to %d.\n" CLI_FONT_DEFAULT,
 				command, MAX_COMMAND_NB); NL1();
 	}
-	LOG(CLI_LOG_SHELL, "Command %s added to shell.", command);
+	LOG(CLI_LOG_SHELL, "Command %s added to shell.\n", command);
 }
 
 uint8_t cli_log(int argc, char *argv[]){

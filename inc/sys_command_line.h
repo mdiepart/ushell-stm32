@@ -39,36 +39,36 @@
 	#define CLI_ADD_CMD(...)	;
 #endif /* CLI_DISABLE */
 
-#define ERR(fmt, ...)  do {                                             \
+#define ERR(fmt, ...)  do {												\
                             fprintf(stderr,								\
 								CLI_FONT_RED							\
-								"[ERROR] %s(%d): "fmt""					\
-								CLI_FONT_DEFAULT"\n",  					\
-                                __FUNCTION__, __LINE__, ##__VA_ARGS__); \
+								"[ERROR] %s:%d: "fmt					\
+								CLI_FONT_DEFAULT,						\
+                                __FILE__, __LINE__, ##__VA_ARGS__);		\
                         }while(0)
 
-#define LOG(LOG_CAT, fmt, ...)  										\
-						if((1<<LOG_CAT)&cli_log_stat) {                     \
+#define LOG(LOG_CAT, fmt, ...)											\
+						if((1<<LOG_CAT)&cli_log_stat) {					\
                             printf(CLI_FONT_CYAN						\
-								"[%s]: "fmt""							\
-								CLI_FONT_DEFAULT"\n",					\
-								cli_logs_names[LOG_CAT],					\
-								##__VA_ARGS__);  						\
+								"[%s]: "fmt								\
+								CLI_FONT_DEFAULT,						\
+								cli_logs_names[LOG_CAT],				\
+								##__VA_ARGS__);							\
                         }
 
-#define DBG(fmt, ...)  do {                                             \
+#define DBG(fmt, ...)  do {												\
                             printf(CLI_FONT_YELLOW						\
-							"[Debug] %s(%d): "fmt""						\
-							CLI_FONT_DEFAULT"\n",						\
-                                __FUNCTION__, __LINE__, ##__VA_ARGS__); \
+							"[Debug] %s:%d: "fmt						\
+							CLI_FONT_DEFAULT,							\
+                                __FILE__, __LINE__, ##__VA_ARGS__);		\
                         } while(0)
 
-#define DIE(fmt, ...)   do {                                       		\
-                            TERMINAL_FONT_RED();                        \
-                            TERMINAL_HIGHLIGHT();                       \
-                            fprintf(stderr, 							\
-								"### DIE ### %s(%d): "fmt"\n",     		\
-                                __FUNCTION__, __LINE__, ##__VA_ARGS__); \
+#define DIE(fmt, ...)   do {											\
+                            TERMINAL_FONT_RED();						\
+                            TERMINAL_HIGHLIGHT();						\
+                            fprintf(stderr,								\
+								"### DIE ### %s:%d: "fmt,				\
+                                __FILE__, __LINE__, ##__VA_ARGS__);		\
                         } while(1) /* infinite loop */
 
 #define NL1()           do { printf("\n"); } while(0)
