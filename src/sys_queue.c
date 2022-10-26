@@ -9,6 +9,7 @@
   ******************************************************************************
   */
 
+#include <string.h>
 #include "main.h"
 #include "../inc/sys_queue.h"
 #include "stdbool.h"

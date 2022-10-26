@@ -75,6 +75,9 @@
 #define NL2()           do { printf("\n\n"); } while(0)
 #define NL3()           do { printf("\n\n\n"); } while(0)
 
+#define STRING(s) #s
+#define XSTRING(s) STRING(s)
+
 #ifdef CLI_NAME
 #define PRINT_CLI_NAME()	do { printf(CLI_FONT_DEFAULT"\n"XSTRING(CLI_NAME)"$ "); } while(0)
 #else

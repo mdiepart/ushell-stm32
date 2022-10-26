@@ -18,8 +18,6 @@
 #include <stdlib.h>
 #include "../inc/sys_command_line.h"
 
-#define STRING(s) #s
-#define XSTRING(s) STRING(s)
 /*******************************************************************************
  *
  * 	Typedefs
